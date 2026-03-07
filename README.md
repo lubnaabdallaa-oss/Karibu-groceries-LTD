@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Karibu Groceries LTD (KGL) - Full Stack Rewrite
 
 This implementation uses `Node.js + Express + MongoDB` for the backend and `HTML + CSS + JavaScript` for the frontend.
@@ -43,3 +44,6 @@ Server runs on `http://localhost:5000`.
 - `GET /inventory`
 - `GET /reports/branch-summary`
 - `GET /reports/director-summary`
+=======
+# Karibu-groceries-LTD
+>>>>>>> 2909a6c5331f77995bd2f6d51e4c4d02593c735b
