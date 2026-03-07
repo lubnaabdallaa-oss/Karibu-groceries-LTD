@@ -1,0 +1,255 @@
+<!doctype html>
+<!-- File purpose: Director dashboard UI for aggregate reports and charts. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Director Dashboard | KGL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-shell">
+    <!-- Director sees only aggregate-level navigation and reports. -->
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-brand"><img src="/images/KGL-logo.png" alt="KGL logo" /></div>
+        <small>Director Workspace</small>
+      </div>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link active" data-panel="overview" href="#overview"><i class="fa-solid fa-chart-line"></i><span>Overview</span></a>
+        <a class="sidebar-link" data-panel="reports" href="#reports"><i class="fa-solid fa-file-invoice"></i><span>Reports</span></a>
+        <a class="sidebar-link" data-panel="charts" href="#charts"><i class="fa-solid fa-chart-pie"></i><span>Charts</span></a>
+      </nav>
+      <div class="sidebar-meta">
+        <small id="userMeta"></small>
+        <div class="sidebar-actions">
+          <button class="secondary" onclick="triggerRefresh()">Refresh Data</button>
+          <button onclick="logout()">Logout</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <div class="topbar">
+        <div>
+          <h1>Director Dashboard</h1>
+          <small>Aggregated branch and product performance only</small>
+        </div>
+        <div class="nav-actions">
+          <button class="secondary" onclick="triggerRefresh()">Refresh</button>
+        </div>
+      </div>
+
+      <section id="overview" class="panel active">
+        <div class="grid cards" id="totals"></div>
+      </section>
+
+      <section id="reports" class="panel">
+        <div class="grid two">
+          <div class="card">
+            <h2>Sales by Branch</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Branch</th><th>Revenue (UGX)</th><th>Sold Kg</th></tr></thead>
+                <tbody id="byBranch"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Sales by Product</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Product</th><th>Revenue (UGX)</th><th>Sold Kg</th></tr></thead>
+                <tbody id="byProduct"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="charts" class="panel">
+        <div class="chart-wrap">
+          <div class="card chart-card">
+            <h2>Branch Revenue Chart</h2>
+            <canvas id="branchChart" width="900" height="300" aria-label="Branch revenue bar chart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h2>Product Sold Kg Chart</h2>
+            <canvas id="productChart" width="900" height="300" aria-label="Product sold kg bar chart"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/public/js/app.js"></script>
+  <script>
+    /**
+     * Director Dashboard logic: 
+     * - Protects the route (requires 'director' role).
+     * - Fetches aggregate branch and product performance data.
+     * - Renders tables and custom bar charts.
+     */
+    
+    // Verify user role before proceeding.
+    const session = APP.ensureRole(["director"]);
+    
+    // DOM elements for navigation and panel management.
+    const navLinks = Array.from(document.querySelectorAll(".sidebar-link"));
+    const panels = Array.from(document.querySelectorAll(".panel"));
+    
+    // Local cache for chart and table data.
+    let cache = { salesByBranch: [], salesByProduct: [] };
+
+    // Set user metadata in the UI.
+    document.getElementById("userMeta").textContent = `${session.user.fullName} (${session.user.username})`;
+
+    /**
+     * Clears the session and redirects to the login page.
+     */
+    function logout() {
+      APP.clearSession();
+      window.location.href = APP.page("/login.html");
+    }
+
+    /**
+     * Triggers a data refresh. Reloads the page if the API call fails.
+     */
+    function triggerRefresh() {
+      loadSummary().catch(() => window.location.reload());
+    }
+
+    /**
+     * Switches the active panel based on the sidebar selection or URL hash.
+     */
+    function activatePanel(panelId) {
+      const chosen = panelId || "overview";
+      panels.forEach((panel) => panel.classList.toggle("active", panel.id === chosen));
+      navLinks.forEach((link) => link.classList.toggle("active", link.dataset.panel === chosen));
+    }
+
+    // Attach click listeners to sidebar links for panel switching.
+    navLinks.forEach((link) => {
+      link.addEventListener("click", () => activatePanel(link.dataset.panel));
+    });
+
+    // Handle back/forward navigation using hashes.
+    window.addEventListener("hashchange", () => {
+      activatePanel(window.location.hash.replace("#", ""));
+    });
+
+    /**
+     * Custom lightweight bar chart renderer using HTML5 Canvas.
+     * Draws a bar chart without needing external libraries.
+     */
+    function drawBarChart(canvasId, data, valueKey, labelKey, barColor) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      const padLeft = 52;
+      const padRight = 20;
+      const padTop = 22;
+      const padBottom = 54;
+      const graphWidth = width - padLeft - padRight;
+      const graphHeight = height - padTop - padBottom;
+
+      // Clear the canvas and draw background.
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#f8fbff";
+      ctx.fillRect(0, 0, width, height);
+
+      // Handle empty data scenario.
+      if (!data.length) {
+        ctx.fillStyle = "#5f738b";
+        ctx.font = "14px Sora";
+        ctx.fillText("No data available", 20, height / 2);
+        return;
+      }
+
+      // Calculate graph scales.
+      const maxVal = Math.max(...data.map((d) => Number(d[valueKey] || 0)), 1);
+      const slot = graphWidth / data.length;
+      const barWidth = Math.min(80, slot * 0.62);
+
+      // Draw axis lines.
+      ctx.strokeStyle = "#c5d5e3";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, padTop);
+      ctx.lineTo(padLeft, padTop + graphHeight);
+      ctx.lineTo(padLeft + graphWidth, padTop + graphHeight);
+      ctx.stroke();
+
+      // Draw Y-axis labels.
+      ctx.fillStyle = "#5c748d";
+      ctx.font = "12px Sora";
+      ctx.fillText(maxVal.toLocaleString(), 7, padTop + 5);
+      ctx.fillText("0", 30, padTop + graphHeight + 4);
+
+      // Draw bars and X-axis labels.
+      data.forEach((row, i) => {
+        const value = Number(row[valueKey] || 0);
+        const label = String(row[labelKey] || "");
+        const x = padLeft + i * slot + (slot - barWidth) / 2;
+        const h = (value / maxVal) * graphHeight;
+        const y = padTop + graphHeight - h;
+
+        // Draw bar.
+        ctx.fillStyle = barColor;
+        ctx.fillRect(x, y, barWidth, h);
+
+        // Draw value above bar.
+        ctx.fillStyle = "#27415d";
+        ctx.font = "11px Sora";
+        ctx.fillText(value.toLocaleString(), x, y - 5);
+        
+        // Draw label below bar.
+        ctx.fillText(label.slice(0, 12), x, padTop + graphHeight + 16);
+      });
+    }
+
+    /**
+     * Fetches aggregate data from the backend and updates the UI.
+     * Redraws tables and charts based on the new data.
+     */
+    async function loadSummary() {
+      // API call to get summary reports.
+      const data = await APP.api("/reports/director-summary");
+      cache = {
+        salesByBranch: data.salesByBranch || [],
+        salesByProduct: data.salesByProduct || [],
+      };
+
+      // Update KPI cards in the Overview section.
+      document.getElementById("totals").innerHTML = `
+        <div class="card kpi-card"><h3>Total Revenue</h3><div class="kpi-value">${APP.currency(data.totals.revenueUgx)}</div></div>
+        <div class="card kpi-card"><h3>Total Sold (Kg)</h3><div class="kpi-value">${Number(data.totals.soldKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Credit Outstanding</h3><div class="kpi-value">${APP.currency(data.totals.creditOutstandingUgx)}</div></div>
+        <div class="card kpi-card"><h3>Credit Tonnage (Kg)</h3><div class="kpi-value">${Number(data.totals.creditKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Total In Stock (Kg)</h3><div class="kpi-value">${Number(data.totals.inStockKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Cash Sale Count</h3><div class="kpi-value">${Number(data.totals.saleCount).toLocaleString()}</div></div>
+      `;
+
+      document.getElementById("byBranch").innerHTML = cache.salesByBranch.map((x) => `
+        <tr><td>${x._id}</td><td>${APP.currency(x.revenueUgx)}</td><td>${Number(x.soldKg).toLocaleString()}</td></tr>
+      `).join("");
+
+      document.getElementById("byProduct").innerHTML = cache.salesByProduct.map((x) => `
+        <tr><td>${x._id}</td><td>${APP.currency(x.revenueUgx)}</td><td>${Number(x.soldKg).toLocaleString()}</td></tr>
+      `).join("");
+
+      drawBarChart("branchChart", cache.salesByBranch, "revenueUgx", "_id", "#0f7a4b");
+      drawBarChart("productChart", cache.salesByProduct, "soldKg", "_id", "#0d5a9c");
+    }
+
+    activatePanel(window.location.hash.replace("#", "") || "overview");
+    loadSummary();
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,332 @@
+<!doctype html>
+<!-- File purpose: Sales agent dashboard UI and client-side workflow handlers. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Agent Dashboard | KGL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-shell">
+    <!-- Sidebar links map to dedicated panels so each task has its own space. -->
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-brand"><img src="/images/KGL-logo.png" alt="KGL logo" /></div>
+        <small>Sales Agent Workspace</small>
+      </div>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link active" data-panel="overview" href="#overview"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <a class="sidebar-link" data-panel="cash-sale" href="#cash-sale"><i class="fa-solid fa-cash-register"></i><span>Cash Sale Form</span></a>
+        <a class="sidebar-link" data-panel="credit-sale" href="#credit-sale"><i class="fa-solid fa-file-contract"></i><span>Credit Sale Form</span></a>
+        <a class="sidebar-link" data-panel="inventory" href="#inventory"><i class="fa-solid fa-boxes-stacked"></i><span>Inventory</span></a>
+        <a class="sidebar-link" data-panel="cash-records" href="#cash-records"><i class="fa-solid fa-money-bill-transfer"></i><span>Cash Sales Records</span></a>
+        <a class="sidebar-link" data-panel="credit-records" href="#credit-records"><i class="fa-solid fa-hand-holding-dollar"></i><span>Credit Sales Records</span></a>
+      </nav>
+      <div class="sidebar-meta">
+        <small id="userMeta"></small>
+        <div class="sidebar-actions">
+          <button class="secondary" onclick="triggerRefresh()">Refresh Data</button>
+          <button onclick="logout()">Logout</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <div class="topbar">
+        <div>
+          <h1>Sales Agent Dashboard</h1>
+          <small>Record branch sales and monitor stock movement</small>
+        </div>
+        <div class="nav-actions">
+          <button class="secondary" onclick="triggerRefresh()">Refresh</button>
+        </div>
+      </div>
+
+      <section id="overview" class="panel active">
+        <div class="grid cards" id="summaryCards"></div>
+      </section>
+
+      <section id="cash-sale" class="panel">
+        <div class="card">
+          <h2>Record Cash Sale</h2>
+          <form id="cashForm" class="form-grid" novalidate>
+            <div><label for="cProduct">Product Name</label><select id="cProduct" data-hint="Choose product currently available at your branch." required></select></div>
+            <div><label for="cType">Produce Type</label><input id="cType" minlength="2" pattern="[A-Za-z ]+" data-pattern-message="Use letters only, at least 2 characters." required /></div>
+            <div><label for="cTonnage">Tonnage (Kg)</label><input id="cTonnage" type="number" min="1" data-hint="Numeric only. Must be greater than 0." required /></div>
+            <div><label for="cBuyer">Buyer Name</label><input id="cBuyer" minlength="2" data-hint="Minimum 2 characters." required /></div>
+            <div><label for="cDate">Date/Time</label><input id="cDate" type="datetime-local" required /></div>
+            <div class="full"><button type="submit">Save Cash Sale</button></div>
+          </form>
+          <div id="cMsg" class="message" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="credit-sale" class="panel">
+        <div class="card">
+          <h2>Record Credit / Deferred Sale</h2>
+          <form id="creditForm" class="form-grid" novalidate>
+            <div><label for="crBuyer">Buyer Name</label><input id="crBuyer" minlength="2" data-hint="Minimum 2 characters." required /></div>
+            <div><label for="crNin">National ID (NIN)</label><input id="crNin" placeholder="CF123456789ABC" data-hint="Use official NIN format." required /></div>
+            <div><label for="crLocation">Location</label><input id="crLocation" minlength="2" data-hint="Buyer location, at least 2 characters." required /></div>
+            <div><label for="crContact">Contact</label><input id="crContact" placeholder="07xxxxxxxx" pattern="^(\+256|0)7\d{8}$" data-pattern-message="Use 07xxxxxxxx or +2567xxxxxxxx format." required /></div>
+            <div><label for="crProduct">Product Name</label><select id="crProduct" data-hint="Credit is allowed for in-stock produce only." required></select></div>
+            <div><label for="crType">Produce Type</label><input id="crType" minlength="2" pattern="[A-Za-z ]+" data-pattern-message="Use letters only, at least 2 characters." required /></div>
+            <div><label for="crTonnage">Tonnage (Kg)</label><input id="crTonnage" type="number" min="1" data-hint="Numeric only and available in stock." required /></div>
+            <div><label for="crDispatch">Dispatch Date/Time</label><input id="crDispatch" type="datetime-local" required /></div>
+            <div><label for="crDue">Due Date/Time</label><input id="crDue" type="datetime-local" required /></div>
+            <div class="full"><button type="submit">Save Credit Sale</button></div>
+          </form>
+          <div id="crMsg" class="message" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="inventory" class="panel">
+        <div class="card">
+          <h2>Branch Inventory</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Product</th><th>Type</th><th>Kg</th><th>Price/Kg</th><th>Status</th></tr>
+              </thead>
+              <tbody id="invBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="cash-records" class="panel">
+        <div class="card">
+          <h2>Recent Cash Sales</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Product</th><th>Kg</th><th>Amount (UGX)</th><th>Buyer</th></tr>
+              </thead>
+              <tbody id="cashBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="credit-records" class="panel">
+        <div class="card">
+          <h2>Recent Credit Sales</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Dispatch</th><th>Due Date</th><th>Buyer</th><th>Product</th><th>Kg</th><th>Due (UGX)</th></tr>
+              </thead>
+              <tbody id="creditBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/public/js/app.js"></script>
+  <script>
+    /**
+     * Sales Agent Dashboard logic:
+     * - Protects the route (requires 'agent' role).
+     * - Handles Cash Sales and Credit Sales forms.
+     * - Displays branch-specific inventory and sales history.
+     */
+     
+    // Fixed KGL produce options available in the sales forms.
+    const PRODUCTS = ["Beans", "Grain Maize", "Cow peas", "G-nuts", "Soybeans"];
+    
+    // Verify user role before proceeding.
+    const session = APP.ensureRole(["agent"]);
+    
+    // DOM elements for navigation and panel management.
+    const navLinks = Array.from(document.querySelectorAll(".sidebar-link"));
+    const panels = Array.from(document.querySelectorAll(".panel"));
+
+    // Set user metadata in the UI (Name and Branch).
+    document.getElementById("userMeta").textContent = `${session.user.fullName} (${session.user.branch})`;
+
+    /**
+     * Clears the session and redirects to the login page.
+     */
+    function logout() {
+      APP.clearSession();
+      window.location.href = APP.page("/login.html");
+    }
+
+    /**
+     * Triggers a data refresh across all panels. Reloads on failure.
+     */
+    function triggerRefresh() {
+      refreshAll().catch(() => window.location.reload());
+    }
+
+    /**
+     * Populates select options for product dropdown fields from the PRODUCTS array.
+     */
+    function fillProducts(id) {
+      const select = document.getElementById(id);
+      select.innerHTML = PRODUCTS.map((p) => `<option value="${p}">${p}</option>`).join("");
+    }
+
+    /**
+     * Switches the active panel based on the sidebar selection or URL hash.
+     */
+    function activatePanel(panelId) {
+      const chosen = panelId || "overview";
+      panels.forEach((panel) => panel.classList.toggle("active", panel.id === chosen));
+      navLinks.forEach((link) => link.classList.toggle("active", link.dataset.panel === chosen));
+    }
+
+    // Attach click listeners to sidebar links for panel switching.
+    navLinks.forEach((link) => {
+      link.addEventListener("click", () => activatePanel(link.dataset.panel));
+    });
+
+    // Handle back/forward navigation using hashes.
+    window.addEventListener("hashchange", () => {
+      activatePanel(window.location.hash.replace("#", ""));
+    });
+
+    // Initialize forms: fill dropdowns and set default date values.
+    fillProducts("cProduct");
+    fillProducts("crProduct");
+    document.getElementById("cDate").value = new Date().toISOString().slice(0, 16);
+    document.getElementById("crDispatch").value = new Date().toISOString().slice(0, 16);
+    document.getElementById("crDue").value = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 16);
+
+    /**
+     * Fetches and displays branch-specific summary KPI cards.
+     */
+    async function refreshCards() {
+      const data = await APP.api("/reports/branch-summary");
+      document.getElementById("summaryCards").innerHTML = `
+        <div class="card kpi-card"><h3>Branch</h3><div class="kpi-value">${data.branch}</div></div>
+        <div class="card kpi-card"><h3>Revenue</h3><div class="kpi-value">${APP.currency(data.revenueUgx)}</div></div>
+        <div class="card kpi-card"><h3>Sold (Kg)</h3><div class="kpi-value">${Number(data.soldKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Credit Due</h3><div class="kpi-value">${APP.currency(data.creditDueUgx)}</div></div>
+        <div class="card kpi-card"><h3>In Stock (Kg)</h3><div class="kpi-value">${Number(data.availableKg).toLocaleString()}</div></div>
+      `;
+    }
+
+    /**
+     * Fetches and displays current inventory records for the agent's branch.
+     */
+    async function refreshInventory() {
+      const rows = await APP.api("/inventory");
+      document.getElementById("invBody").innerHTML = rows.map((r) => `
+        <tr>
+          <td>${r.productName}</td>
+          <td>${r.produceType}</td>
+          <td>${Number(r.availableKg).toLocaleString()}</td>
+          <td>${APP.currency(r.sellingPricePerKgUgx)}</td>
+          <td><span class="badge ${r.lowStock ? "low" : ""}">${r.lowStock ? "Low stock" : "OK"}</span></td>
+        </tr>
+      `).join("");
+    }
+
+    /**
+     * Fetches and displays the latest cash sales recorded at this branch.
+     */
+    async function refreshCashSales() {
+      const rows = await APP.api("/sales/cash");
+      document.getElementById("cashBody").innerHTML = rows.slice(0, 100).map((r) => `
+        <tr>
+          <td>${new Date(r.soldAt).toLocaleString()}</td>
+          <td>${r.productName}</td>
+          <td>${Number(r.tonnageKg).toLocaleString()}</td>
+          <td>${APP.currency(r.amountPaidUgx)}</td>
+          <td>${r.buyerName}</td>
+        </tr>
+      `).join("");
+    }
+
+    /**
+     * Fetches and displays the latest credit sales recorded at this branch.
+     */
+    async function refreshCreditSales() {
+      const rows = await APP.api("/sales/credit");
+      document.getElementById("creditBody").innerHTML = rows.slice(0, 100).map((r) => `
+        <tr>
+          <td>${new Date(r.dispatchDate).toLocaleString()}</td>
+          <td>${new Date(r.dueDate).toLocaleDateString()}</td>
+          <td>${r.buyerName}</td>
+          <td>${r.productName}</td>
+          <td>${Number(r.tonnageKg).toLocaleString()}</td>
+          <td>${APP.currency(r.amountDueUgx)}</td>
+        </tr>
+      `).join("");
+    }
+
+    /**
+     * Refreshes all data sections of the dashboard in parallel.
+     */
+    async function refreshAll() {
+      await Promise.all([refreshCards(), refreshInventory(), refreshCashSales(), refreshCreditSales()]);
+    }
+
+    document.getElementById("cashForm").addEventListener("submit", async (e) => {
+      // Submits cash sale form and refreshes dashboard data.
+      e.preventDefault();
+      const msg = document.getElementById("cMsg");
+      msg.className = "message";
+      msg.textContent = "";
+      try {
+        const payload = {
+          productName: document.getElementById("cProduct").value,
+          produceType: document.getElementById("cType").value.trim(),
+          tonnageKg: Number(document.getElementById("cTonnage").value),
+          buyerName: document.getElementById("cBuyer").value.trim(),
+          salesAgentName: session.user.fullName,
+          soldAt: new Date(document.getElementById("cDate").value).toISOString(),
+        };
+        const result = await APP.api("/sales/cash", { method: "POST", body: JSON.stringify(payload) });
+        msg.className = "message success";
+        msg.textContent = result.managerNotification || "Cash sale saved.";
+        await refreshAll();
+      } catch (error) {
+        msg.className = "message error";
+        msg.textContent = error.message;
+      }
+    });
+
+    document.getElementById("creditForm").addEventListener("submit", async (e) => {
+      // Submits credit sale form and refreshes dashboard data.
+      e.preventDefault();
+      const msg = document.getElementById("crMsg");
+      msg.className = "message";
+      msg.textContent = "";
+      try {
+        const payload = {
+          buyerName: document.getElementById("crBuyer").value.trim(),
+          nationalId: document.getElementById("crNin").value.trim(),
+          location: document.getElementById("crLocation").value.trim(),
+          contact: document.getElementById("crContact").value.trim(),
+          productName: document.getElementById("crProduct").value,
+          produceType: document.getElementById("crType").value.trim(),
+          tonnageKg: Number(document.getElementById("crTonnage").value),
+          salesAgentName: session.user.fullName,
+          dispatchDate: new Date(document.getElementById("crDispatch").value).toISOString(),
+          dueDate: new Date(document.getElementById("crDue").value).toISOString(),
+        };
+        const result = await APP.api("/sales/credit", { method: "POST", body: JSON.stringify(payload) });
+        msg.className = "message success";
+        msg.textContent = result.managerNotification || "Credit sale saved.";
+        await refreshAll();
+      } catch (error) {
+        msg.className = "message error";
+        msg.textContent = error.message;
+      }
+    });
+
+    activatePanel(window.location.hash.replace("#", "") || "overview");
+    refreshAll();
+  </script>
+</body>
+</html>
+

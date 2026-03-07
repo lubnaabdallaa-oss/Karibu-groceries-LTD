@@ -1,0 +1,473 @@
+<!doctype html>
+<!-- File purpose: Login page markup and role-based redirect behavior. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KGL Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <style>
+    :root {
+      --login-bg-1: #f3f7ff;
+      --login-bg-2: #dbe9ff;
+      --login-bg-3: #e9fff4;
+      --login-ink: #10233f;
+      --login-muted: #4b5d78;
+      --login-card: rgba(255, 255, 255, 0.74);
+      --login-card-border: rgba(255, 255, 255, 0.78);
+      --login-primary: #072d53;
+      --login-primary-2: #0655a4;
+      --login-focus: rgba(11, 107, 203, 0.2);
+      --login-shadow: 0 24px 70px rgba(23, 53, 108, 0.22);
+    }
+
+    body.login-page {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--login-ink);
+      font-family: "Sora", "Segoe UI", Tahoma, sans-serif;
+      background:
+        radial-gradient(circle at 14% 22%, #d8e8ff 0, #d8e8ff 19%, transparent 50%),
+        radial-gradient(circle at 86% 76%, #c9f5de 0, #c9f5de 16%, transparent 44%),
+        linear-gradient(145deg, var(--login-bg-1), var(--login-bg-2) 48%, var(--login-bg-3));
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .login-shell {
+      width: 100%;
+      max-width: 1040px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .login-intro {
+      position: relative;
+      isolation: isolate;
+      background-image: url(/images/-maganjofarm.jpg);
+      background-size: cover;                  /* Scale to cover entire form */
+      background-position: center;             /* Center the image */
+      background-repeat: no-repeat;            /* Prevent tiling */
+      padding: 30px 24px;                     /* Add spacing inside form */
+      border-radius: 26px;                      /* Optional: rounded corners */
+      text-align: center;              /* Center text and inline elements */
+      margin-bottom: 20px;             /* Space below intro before panel */
+      margin-top: 10px;
+
+    }
+
+    .login-intro::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 26px;
+      background:
+        linear-gradient(160deg, rgba(3, 18, 36, 0.65), rgba(6, 35, 62, 0.55)),
+        radial-gradient(circle at 20% 15%, rgba(0, 0, 0, 0.2), transparent 40%);
+      z-index: 0;
+    }
+
+    .login-intro > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    
+    .login-intro h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3.2vw, 3rem);
+      line-height: 1.1;
+      letter-spacing: -0.04em;
+    }
+
+    .login-intro p {
+      margin: 16px 0 0;
+      line-height: 1.6;
+      color: #ffd7a1;
+      font-weight: 700;
+    }
+
+    .login-intro h1,
+    .login-intro h2 {
+      color: #f4f9ff;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
+    }
+
+    .login-panel {
+      background: var(--login-card);
+      border: 1px solid var(--login-card-border);
+      border-radius: 24px;
+      box-shadow: var(--login-shadow);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      padding: 28px 24px 22px;
+      animation: rise-in 650ms ease-out both 90ms;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+
+  
+    .logo {
+      text-align: center; /* Centers inline elements like img */
+    }
+
+   .logo img {
+      width: 100px;   /* Adjust size */
+      margin-bottom: 2px;
+    }
+
+    .login-panel h4 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .login-panel p {
+      color: green;
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+      text-align: center;
+    }
+
+    .login-form {
+      margin-top: 0px;
+      gap: 10px;
+      
+    }
+
+    .field-wrap {
+      position: relative;
+    }
+
+    .field-wrap input {
+      border: 1px solid rgba(15, 72, 138, 0.22);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.84);
+      padding: 12px 13px;
+      font: inherit;
+      color: var(--login-ink);
+      transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+      
+    }
+
+    .field-wrap.password-wrap input {
+      padding-right: 50px;
+    }
+
+    .field-wrap input:focus {
+      outline: none;
+      border-color: var(--login-primary);
+      box-shadow: 0 0 0 4px var(--login-focus);
+      transform: translateY(-1px);
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 9px;
+      top: 30px;
+      width: 39px;
+      height: 28px;
+      padding: 5px;
+      border: 0;
+      border-radius: 10px;
+      background: rgba(15, 72, 138, 0.08);
+      color: #214b7a;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background-color 140ms ease, transform 140ms ease;
+    }
+
+    .password-toggle:hover {
+      background: rgba(15, 72, 138, 0.14);
+      transform: translateY(-1px);
+    }
+
+    .password-toggle svg {
+      margin-bottom: 10px;
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      pointer-events: none;
+    }
+
+    #loginBtn {
+      margin-top: 4px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--login-primary), var(--login-primary-2));
+      color: #fff;
+      font-family: inherit;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+    }
+
+    #loginBtn:hover {
+      background-color: orange;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(238, 124, 17, 0.3);
+      filter: saturate(1.05);
+    }
+
+    #loginBtn:disabled {
+      cursor: wait;
+      transform: none;
+      box-shadow: none;
+      opacity: 0.85;
+    }
+
+    .message {
+      min-height: 1.4rem;
+      margin-top: 12px;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    @keyframes rise-in {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .login-shell {
+        grid-template-columns: 1fr;
+        max-width: 560px;
+      }
+      .login-intro {
+        padding: 24px 20px;
+        margin-bottom: 12px;
+      }
+      .login-intro p {
+        max-width: 45ch;
+      }
+    }
+
+    @media (max-width: 560px) {
+      body.login-page {
+        padding: 16px;
+      }
+      .login-intro {
+        padding: 20px 16px;
+        margin-top: 0;
+      }
+      .login-panel {
+        padding: 22px 16px 18px;
+        border-radius: 8px;
+        margin-top: 0;
+        margin-bottom: 0;
+      }
+      .login-intro h1 {
+        font-size: clamp(1.7rem, 8vw, 2.2rem);
+      }
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 1rem 1.5rem;
+      border-radius: 5px;
+      color: #fff;
+      font-weight: bold;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.5s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      background-color: #4caf50;
+    }
+
+    .toast.error {
+      background-color: #f44336;
+    }
+  </style>
+</head>
+<!-- ================= LOGIN PAGE LAYOUT ================= -->
+<body class="login-page">
+  <main class="login-shell" role="main">
+    <section class="login-intro" aria-hidden="true">
+      <!-- Company logo -->
+      <div class="logo">
+      <img src="/images/KGL-logo.png" alt="Kgl Logo">
+      </div>
+      <h1>Karibu Groceries LTD</h1>
+      <h2>Secure access to your operations dashboard</h2>
+      <p>Track procurement, monitor sales activity, and review executive reports from one trusted workspace.</p>
+    </section>
+    <section class="login-panel">
+      <div class="logo">
+      <img src="/images/KGL-logo.png" alt="Kgl Logo">
+    </div>
+      <h4>Welcome back!</h4>
+      <p> Please log in to continue.</p>
+      <form id="loginForm" class="grid login-form" novalidate autocomplete="off">
+        <!-- Credentials section: validates inputs before API login call. -->
+        <div class="field-wrap">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" autocomplete="off" data-hint="Use your assigned KGL account username." required />
+        </div>
+        <div class="field-wrap password-wrap">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" data-hint="Enter your secure password." required />
+          <button id="passwordToggle" class="password-toggle" type="button" aria-label="Show password" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5C6.5 5 2.1 8.4.5 12c1.6 3.6 6 7 11.5 7s9.9-3.4 11.5-7c-1.6-3.6-6-7-11.5-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path>
+            </svg>
+          </button>
+        </div>
+        <button id="loginBtn" type="submit">Login</button>
+      </form>
+      <div id="msg" class="message" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="/public/js/app.js"></script>
+  <script>
+    /**
+     * Handles the login form submission and UI logic.
+     */
+    const form = document.getElementById("loginForm");
+    const msg = document.getElementById("msg");
+    const loginBtn = document.getElementById("loginBtn");
+    const passwordInput = document.getElementById("password");
+    const passwordToggle = document.getElementById("passwordToggle");
+    
+    // SVG icons for password visibility toggle.
+    const EYE_OPEN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5C6.5 5 2.1 8.4.5 12c1.6 3.6 6 7 11.5 7s9.9-3.4 11.5-7c-1.6-3.6-6-7-11.5-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg>';
+    const EYE_CLOSED_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.7 3.9L1.3 5.3l4 4C3.1 10.1 1.4 11.8.5 14c1.6 3.6 6 7 11.5 7 2.3 0 4.5-.6 6.4-1.6l3.3 3.3 1.4-1.4L2.7 3.9zM12 19c-4.4 0-8-2.6-9.5-5 0-.1.1-.2.2-.3 1-1.5 2.4-2.8 4-3.7l1.7 1.7A3.9 3.9 0 0 0 8 13a4 4 0 0 0 4 4c.5 0 .9-.1 1.3-.2l1.7 1.7c-1 .3-2 .5-3 .5zm0-14c5.5 0 9.9 3.4 11.5 7-.6 1.3-1.5 2.4-2.6 3.4l-1.4-1.4a12 12 0 0 0 1.6-2c-1.5-2.4-5.1-5-9.5-5-1 0-2 .1-2.9.4L7.1 5.8A13.2 13.2 0 0 1 12 5zm0 4a4 4 0 0 1 4 4c0 .8-.2 1.5-.6 2.1l-1.6-1.6c.1-.2.2-.4.2-.5a2 2 0 0 0-2-2c-.2 0-.4.1-.6.2L9.8 9.6c.6-.4 1.4-.6 2.2-.6z"></path></svg>';
+
+    /**
+     * Displays a feedback message to the user.
+     */
+    function setMessage(text, type) {
+      msg.className = `message${type ? ` ${type}` : ""}`;
+      msg.textContent = text;
+    }
+
+    /**
+     * Resets form fields and password visibility state.
+     */
+    function resetLoginFields() {
+      form.reset();
+      document.getElementById("username").value = "";
+      document.getElementById("password").value = "";
+      passwordInput.type = "password";
+      passwordToggle.innerHTML = EYE_OPEN_ICON;
+      passwordToggle.setAttribute("aria-label", "Show password");
+      passwordToggle.setAttribute("aria-pressed", "false");
+    }
+
+    /**
+     * Maps user roles to their respective dashboard URLs.
+     */
+    function dashboardPathForRole(role) {
+      if (role === "manager") return "/manager-dashboard.html";
+      if (role === "agent") return "/salesagent-dashboard.html";
+      if (role === "director") return "/director.html";
+      return "";
+    }
+
+    // Initialization: Clear fields on load.
+    resetLoginFields();
+    window.addEventListener("pageshow", () => resetLoginFields());
+
+    // Auto-redirect if a valid session already exists.
+    if (typeof APP !== "undefined") {
+      const session = APP.getSession();
+      const existingRole = session && session.user ? session.user.role : "";
+      const existingTarget = dashboardPathForRole(existingRole);
+      if (existingTarget) {
+        window.location.replace(APP.page(existingTarget));
+      }
+    }
+
+    /**
+     * Toggles the password field visibility (text vs password).
+     */
+    passwordToggle.addEventListener("click", () => {
+      const isHidden = passwordInput.type === "password";
+      passwordInput.type = isHidden ? "text" : "password";
+      passwordToggle.innerHTML = isHidden ? EYE_CLOSED_ICON : EYE_OPEN_ICON;
+      passwordToggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+      passwordToggle.setAttribute("aria-pressed", isHidden ? "true" : "false");
+    });
+
+    /**
+     * Handles the form submission: validates inputs and calls the login API.
+     */
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMessage("");
+
+      // Ensure the shared APP script is loaded.
+      if (typeof APP === "undefined") {
+        setMessage("App script failed to load. Refresh the page.", "error");
+        return;
+      }
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!username || !password) {
+        setMessage("Username and password are required.", "error");
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Signing in...";
+
+      try {
+        const payload = { username, password };
+        // Call the backend login endpoint.
+        const data = await APP.api("/auth/login", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        // Store session and redirect based on role.
+        APP.setSession(data);
+        setMessage("Login successful. Redirecting...", "success");
+        
+        const role = data && data.user ? data.user.role : "";
+        const target = dashboardPathForRole(role);
+        if (target) {
+          window.location.href = APP.page(target);
+        } else {
+          APP.clearSession();
+          setMessage("Unknown user role. Contact administrator.", "error");
+        }
+      } catch (error) {
+        // Display API or network errors to the user.
+        setMessage(error.message || "Login failed", "error");
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Login";
+      }
+    });
+  </script>
+</body>
+</html>
+

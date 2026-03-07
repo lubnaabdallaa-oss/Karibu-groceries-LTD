@@ -1,0 +1,424 @@
+<!doctype html>
+<!-- File purpose: Manager dashboard UI and client-side workflow handlers. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manager Dashboard | KGL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-shell">
+    <!-- Sidebar navigation controls which panel (form/report) is visible. -->
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-brand"><img src="/images/KGL-logo.png" alt="KGL logo" /></div>
+        <small> Manager Workspace</small>
+      </div>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link active" data-panel="overview" href="#overview"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <a class="sidebar-link" data-panel="procurement" href="#procurement"><i class="fa-solid fa-truck-ramp-box"></i><span>Procurement Form</span></a>
+        <a class="sidebar-link" data-panel="cash-sale" href="#cash-sale"><i class="fa-solid fa-cash-register"></i><span>Cash Sale Form</span></a>
+        <a class="sidebar-link" data-panel="credit-sale" href="#credit-sale"><i class="fa-solid fa-file-contract"></i><span>Credit Sale Form</span></a>
+        <a class="sidebar-link" data-panel="inventory" href="#inventory"><i class="fa-solid fa-boxes-stacked"></i><span>Inventory Records</span></a>
+        <a class="sidebar-link" data-panel="cash-records" href="#cash-records"><i class="fa-solid fa-money-bill-transfer"></i><span>Cash Sales Records</span></a>
+        <a class="sidebar-link" data-panel="credit-records" href="#credit-records"><i class="fa-solid fa-hand-holding-dollar"></i><span>Credit Sales Records</span></a>
+      </nav>
+      <div class="sidebar-meta">
+        <small id="userMeta"></small>
+        <div class="sidebar-actions">
+          <button class="secondary" onclick="triggerRefresh()">Refresh Data</button>
+          <button onclick="logout()">Logout</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <div class="topbar">
+        <div>
+          <h1>Manager Control Center</h1>
+          <small>Procurement, branch sales, and stock control</small>
+        </div>
+        <div class="nav-actions">
+          <button class="secondary" onclick="triggerRefresh()">Refresh</button>
+        </div>
+      </div>
+
+      <section id="overview" class="panel active">
+        <div class="grid cards" id="summaryCards"></div>
+      </section>
+
+      <section id="procurement" class="panel">
+        <div class="card">
+          <h2>Record Procurement</h2>
+          <p class="muted">Manager-only entry for produce received from dealers, companies, or farms.</p>
+          <form id="procurementForm" class="form-grid" novalidate>
+            <div><label for="pProduct">Product Name</label><select id="pProduct" data-hint="Choose one of the KGL supported cereals." required></select></div>
+            <div><label for="pType">Produce Type</label><input id="pType" minlength="2" pattern="[A-Za-z ]+" data-pattern-message="Use letters only, at least 2 characters." required /></div>
+            <div>
+              <label for="pSource">Source</label>
+              <select id="pSource" data-hint="Select where this produce was procured from." required>
+                <option value="individual_dealer">Individual Dealer</option>
+                <option value="company">Company</option>
+                <option value="farm_maganjo">Farm - Maganjo</option>
+                <option value="farm_matugga">Farm - Matugga</option>
+              </select>
+            </div>
+            <div><label for="pSourceName">Dealer / Company Name</label><input id="pSourceName" minlength="2" data-hint="Minimum 2 characters." required /></div>
+            <div><label for="pContact">Contact</label><input id="pContact" placeholder="07xxxxxxxx" pattern="^(\+256|0)7\d{8}$" data-pattern-message="Use 07xxxxxxxx or +2567xxxxxxxx format." required /></div>
+            <div>
+              <label for="pBranch">Stock Branch</label>
+              <select id="pBranch" data-hint="Destination branch for this stock." required>
+                <option value="maganjo">Maganjo</option>
+                <option value="matugga">Matugga</option>
+              </select>
+            </div>
+            <div><label for="pTonnage">Tonnage (Kg)</label><input id="pTonnage" type="number" min="100" data-hint="Numeric only. Dealer source should be >= 1000kg." required /></div>
+            <div><label for="pCost">Total Cost (UGX)</label><input id="pCost" type="number" min="10000" data-hint="Enter full cost in Uganda shillings." required /></div>
+            <div><label for="pPrice">Selling Price per Kg (UGX)</label><input id="pPrice" type="number" min="1000" data-hint="This price is used to calculate sales amounts." required /></div>
+            <div><label for="pDate">Procurement Date/Time</label><input id="pDate" type="datetime-local" required /></div>
+            <div class="full"><button type="submit">Save Procurement</button></div>
+          </form>
+          <div id="pMsg" class="message" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="cash-sale" class="panel">
+        <div class="card">
+          <h2>Record Cash Sale</h2>
+          <p class="muted">Only items in stock are accepted. Amount is computed from pre-set manager price.</p>
+          <form id="saleForm" class="form-grid" novalidate>
+            <div><label for="sProduct">Product Name</label><select id="sProduct" data-hint="Select product currently available in stock." required></select></div>
+            <div><label for="sType">Produce Type</label><input id="sType" minlength="2" pattern="[A-Za-z ]+" data-pattern-message="Use letters only, at least 2 characters." required /></div>
+            <div>
+              <label for="sBranch">Branch</label>
+              <select id="sBranch" data-hint="Branch where this sale is being made." required>
+                <option value="maganjo">Maganjo</option>
+                <option value="matugga">Matugga</option>
+              </select>
+            </div>
+            <div><label for="sTonnage">Tonnage (Kg)</label><input id="sTonnage" type="number" min="1" data-hint="Value must be greater than 0." required /></div>
+            <div><label for="sBuyer">Buyer Name</label><input id="sBuyer" minlength="2" data-hint="Minimum 2 characters." required /></div>
+            <div><label for="sAgent">Sales Agent Name</label><input id="sAgent" minlength="2" data-hint="Name of staff handling this sale." required /></div>
+            <div><label for="sDate">Sale Date/Time</label><input id="sDate" type="datetime-local" required /></div>
+            <div class="full"><button type="submit">Save Cash Sale</button></div>
+          </form>
+          <div id="sMsg" class="message" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="credit-sale" class="panel">
+        <div class="card">
+          <h2>Record Credit / Deferred Sale</h2>
+          <p class="muted">Trusted buyers only. Keep national ID, due date, and contact details accurate.</p>
+          <form id="creditForm" class="form-grid" novalidate>
+            <div><label for="crBuyer">Buyer Name</label><input id="crBuyer" minlength="2" data-hint="Minimum 2 characters." required /></div>
+            <div><label for="crNin">National ID (NIN)</label><input id="crNin" placeholder="CF123456789ABC" data-hint="Use official Uganda NIN format." required /></div>
+            <div><label for="crLocation">Location</label><input id="crLocation" minlength="2" data-hint="Buyer's physical location." required /></div>
+            <div><label for="crContact">Contact</label><input id="crContact" placeholder="07xxxxxxxx" pattern="^(\+256|0)7\d{8}$" data-pattern-message="Use 07xxxxxxxx or +2567xxxxxxxx format." required /></div>
+            <div><label for="crProduct">Product Name</label><select id="crProduct" data-hint="Credit can only be taken for available stock." required></select></div>
+            <div><label for="crType">Produce Type</label><input id="crType" minlength="2" pattern="[A-Za-z ]+" data-pattern-message="Use letters only, at least 2 characters." required /></div>
+            <div>
+              <label for="crBranch">Branch</label>
+              <select id="crBranch" data-hint="Branch dispatching this produce." required>
+                <option value="maganjo">Maganjo</option>
+                <option value="matugga">Matugga</option>
+              </select>
+            </div>
+            <div><label for="crTonnage">Tonnage (Kg)</label><input id="crTonnage" type="number" min="1" data-hint="Numeric only. Must be in stock." required /></div>
+            <div><label for="crAgent">Sales Agent Name</label><input id="crAgent" minlength="2" data-hint="Staff responsible for this transaction." required /></div>
+            <div><label for="crDispatch">Dispatch Date/Time</label><input id="crDispatch" type="datetime-local" required /></div>
+            <div><label for="crDue">Due Date/Time</label><input id="crDue" type="datetime-local" required /></div>
+            <div class="full"><button type="submit">Save Credit Sale</button></div>
+          </form>
+          <div id="crMsg" class="message" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="inventory" class="panel">
+        <div class="card">
+          <h2>Inventory Records</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Branch</th><th>Product</th><th>Type</th><th>Kg</th><th>Price/Kg</th><th>Status</th></tr>
+              </thead>
+              <tbody id="inventoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="cash-records" class="panel">
+        <div class="card">
+          <h2>Cash Sales Records</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Branch</th><th>Product</th><th>Kg</th><th>Amount (UGX)</th><th>Buyer</th><th>Agent</th></tr>
+              </thead>
+              <tbody id="saleBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="credit-records" class="panel">
+        <div class="card">
+          <h2>Credit Sales Records</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Dispatch</th><th>Due Date</th><th>Branch</th><th>Buyer</th><th>Product</th><th>Kg</th><th>Due (UGX)</th></tr>
+              </thead>
+              <tbody id="creditBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/public/js/app.js"></script>
+  <script>
+    /**
+     * Manager Dashboard logic:
+     * - Protects the route (requires 'manager' role).
+     * - Handles Procurement, Cash Sales, and Credit Sales forms.
+     * - Displays real-time inventory and sales records.
+     */
+     
+    // List of KGL-supported produce for dropdowns.
+    const PRODUCTS = ["Beans", "Grain Maize", "Cow peas", "G-nuts", "Soybeans"];
+    
+    // Verify user role before proceeding.
+    const session = APP.ensureRole(["manager"]);
+    
+    // DOM elements for navigation and panel management.
+    const navLinks = Array.from(document.querySelectorAll(".sidebar-link"));
+    const panels = Array.from(document.querySelectorAll(".panel"));
+
+    // Set user metadata in the UI.
+    document.getElementById("userMeta").textContent = `${session.user.fullName} (${session.user.branch})`;
+
+    /**
+     * Clears the session and redirects to the login page.
+     */
+    function logout() {
+      APP.clearSession();
+      window.location.href = APP.page("/login.html");
+    }
+
+    /**
+     * Triggers a data refresh across all panels. Reloads on failure.
+     */
+    function triggerRefresh() {
+      refreshAll().catch(() => window.location.reload());
+    }
+
+    /**
+     * Populates select options for product dropdown fields from the PRODUCTS array.
+     */
+    function fillProducts(id) {
+      const select = document.getElementById(id);
+      select.innerHTML = PRODUCTS.map((p) => `<option value="${p}">${p}</option>`).join("");
+    }
+
+    /**
+     * Switches the visible content panel when a sidebar item is clicked or hash changes.
+     */
+    function activatePanel(panelId) {
+      const chosen = panelId || "overview";
+      panels.forEach((panel) => panel.classList.toggle("active", panel.id === chosen));
+      navLinks.forEach((link) => link.classList.toggle("active", link.dataset.panel === chosen));
+    }
+
+    // Attach click listeners to sidebar links for panel switching.
+    navLinks.forEach((link) => {
+      link.addEventListener("click", () => activatePanel(link.dataset.panel));
+    });
+
+    // Handle back/forward navigation using hashes.
+    window.addEventListener("hashchange", () => {
+      activatePanel(window.location.hash.replace("#", ""));
+    });
+
+    // Initialize forms: fill dropdowns and set default date values.
+    fillProducts("pProduct");
+    fillProducts("sProduct");
+    fillProducts("crProduct");
+    document.getElementById("pDate").value = new Date().toISOString().slice(0, 16);
+    document.getElementById("sDate").value = new Date().toISOString().slice(0, 16);
+    document.getElementById("crDispatch").value = new Date().toISOString().slice(0, 16);
+    document.getElementById("crDue").value = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 16);
+    document.getElementById("sAgent").value = session.user.fullName || "";
+    document.getElementById("crAgent").value = session.user.fullName || "";
+
+    /**
+     * Fetches and displays summary KPI cards (Revenue, Sold Kg, etc.).
+     */
+    async function refreshCards() {
+      const data = await APP.api("/reports/branch-summary");
+      document.getElementById("summaryCards").innerHTML = `
+        <div class="card kpi-card"><h3>Total Revenue</h3><div class="kpi-value">${APP.currency(data.revenueUgx)}</div></div>
+        <div class="card kpi-card"><h3>Sold (Kg)</h3><div class="kpi-value">${Number(data.soldKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Procured (Kg)</h3><div class="kpi-value">${Number(data.procuredKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>In Stock (Kg)</h3><div class="kpi-value">${Number(data.availableKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Credit Outstanding</h3><div class="kpi-value">${APP.currency(data.creditDueUgx)}</div></div>
+      `;
+    }
+
+    /**
+     * Fetches and displays current inventory records in a table.
+     */
+    async function refreshInventory() {
+      const rows = await APP.api("/inventory");
+      document.getElementById("inventoryBody").innerHTML = rows.map((r) => `
+        <tr>
+          <td>${r.branch}</td>
+          <td>${r.productName}</td>
+          <td>${r.produceType}</td>
+          <td>${Number(r.availableKg).toLocaleString()}</td>
+          <td>${APP.currency(r.sellingPricePerKgUgx)}</td>
+          <td><span class="badge ${r.lowStock ? "low" : ""}">${r.lowStock ? "Low stock" : "OK"}</span></td>
+        </tr>
+      `).join("");
+    }
+
+    /**
+     * Fetches and displays the latest cash sales records.
+     */
+    async function refreshCashSales() {
+      const rows = await APP.api("/sales/cash");
+      document.getElementById("saleBody").innerHTML = rows.slice(0, 100).map((r) => `
+        <tr>
+          <td>${new Date(r.soldAt).toLocaleString()}</td>
+          <td>${r.branch}</td>
+          <td>${r.productName}</td>
+          <td>${Number(r.tonnageKg).toLocaleString()}</td>
+          <td>${APP.currency(r.amountPaidUgx)}</td>
+          <td>${r.buyerName}</td>
+          <td>${r.salesAgentName}</td>
+        </tr>
+      `).join("");
+    }
+
+    async function refreshCreditSales() {
+      // Loads latest credit sale records.
+      const rows = await APP.api("/sales/credit");
+      document.getElementById("creditBody").innerHTML = rows.slice(0, 100).map((r) => `
+        <tr>
+          <td>${new Date(r.dispatchDate).toLocaleString()}</td>
+          <td>${new Date(r.dueDate).toLocaleDateString()}</td>
+          <td>${r.branch}</td>
+          <td>${r.buyerName}</td>
+          <td>${r.productName}</td>
+          <td>${Number(r.tonnageKg).toLocaleString()}</td>
+          <td>${APP.currency(r.amountDueUgx)}</td>
+        </tr>
+      `).join("");
+    }
+
+    // Refreshes all dashboard datasets in one call.
+    async function refreshAll() {
+      await Promise.all([refreshCards(), refreshInventory(), refreshCashSales(), refreshCreditSales()]);
+    }
+
+    document.getElementById("procurementForm").addEventListener("submit", async (e) => {
+      // Submits procurement form and refreshes dashboard data.
+      e.preventDefault();
+      const msg = document.getElementById("pMsg");
+      msg.className = "message";
+      msg.textContent = "";
+
+      try {
+        const payload = {
+          productName: document.getElementById("pProduct").value,
+          produceType: document.getElementById("pType").value.trim(),
+          source: document.getElementById("pSource").value,
+          sourceName: document.getElementById("pSourceName").value.trim(),
+          sourceContact: document.getElementById("pContact").value.trim(),
+          branch: document.getElementById("pBranch").value,
+          tonnageKg: Number(document.getElementById("pTonnage").value),
+          costUgx: Number(document.getElementById("pCost").value),
+          sellingPricePerKgUgx: Number(document.getElementById("pPrice").value),
+          procuredAt: new Date(document.getElementById("pDate").value).toISOString(),
+        };
+        await APP.api("/procurements", { method: "POST", body: JSON.stringify(payload) });
+        msg.className = "message success";
+        msg.textContent = "Procurement saved.";
+        await refreshAll();
+      } catch (error) {
+        msg.className = "message error";
+        msg.textContent = error.message;
+      }
+    });
+
+    document.getElementById("saleForm").addEventListener("submit", async (e) => {
+      // Submits cash sale form and refreshes dashboard data.
+      e.preventDefault();
+      const msg = document.getElementById("sMsg");
+      msg.className = "message";
+      msg.textContent = "";
+
+      try {
+        const payload = {
+          productName: document.getElementById("sProduct").value,
+          produceType: document.getElementById("sType").value.trim(),
+          branch: document.getElementById("sBranch").value,
+          tonnageKg: Number(document.getElementById("sTonnage").value),
+          buyerName: document.getElementById("sBuyer").value.trim(),
+          salesAgentName: document.getElementById("sAgent").value.trim(),
+          soldAt: new Date(document.getElementById("sDate").value).toISOString(),
+        };
+        const result = await APP.api("/sales/cash", { method: "POST", body: JSON.stringify(payload) });
+        msg.className = "message success";
+        msg.textContent = result.managerNotification || "Cash sale saved.";
+        await refreshAll();
+      } catch (error) {
+        msg.className = "message error";
+        msg.textContent = error.message;
+      }
+    });
+
+    document.getElementById("creditForm").addEventListener("submit", async (e) => {
+      // Submits credit sale form and refreshes dashboard data.
+      e.preventDefault();
+      const msg = document.getElementById("crMsg");
+      msg.className = "message";
+      msg.textContent = "";
+
+      try {
+        const payload = {
+          buyerName: document.getElementById("crBuyer").value.trim(),
+          nationalId: document.getElementById("crNin").value.trim(),
+          location: document.getElementById("crLocation").value.trim(),
+          contact: document.getElementById("crContact").value.trim(),
+          productName: document.getElementById("crProduct").value,
+          produceType: document.getElementById("crType").value.trim(),
+          branch: document.getElementById("crBranch").value,
+          tonnageKg: Number(document.getElementById("crTonnage").value),
+          salesAgentName: document.getElementById("crAgent").value.trim(),
+          dispatchDate: new Date(document.getElementById("crDispatch").value).toISOString(),
+          dueDate: new Date(document.getElementById("crDue").value).toISOString(),
+        };
+        const result = await APP.api("/sales/credit", { method: "POST", body: JSON.stringify(payload) });
+        msg.className = "message success";
+        msg.textContent = result.managerNotification || "Credit sale saved.";
+        await refreshAll();
+      } catch (error) {
+        msg.className = "message error";
+        msg.textContent = error.message;
+      }
+    });
+
+    activatePanel(window.location.hash.replace("#", "") || "overview");
+    refreshAll();
+  </script>
+</body>
+</html>
+
