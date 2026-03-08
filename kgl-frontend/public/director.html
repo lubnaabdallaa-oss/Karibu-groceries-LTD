@@ -257,6 +257,15 @@
       userMessage.textContent = text || "";
     }
 
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
     function syncBranchVisibility() {
       const role = String(roleSelect.value || "").toLowerCase();
       const isDirector = role === "director";
@@ -320,18 +329,30 @@
       const rows = getFilteredUsers();
       usersTable.innerHTML = rows.map((row) => `
         <tr>
-          <td>${row.username || ""}</td>
-          <td>${row.fullName || ""}</td>
-          <td><span class="badge role role-${row.role || "unknown"}">${row.role || ""}</span></td>
-          <td>${row.branch || "-"}</td>
+          <td>${escapeHtml(row.username)}</td>
+          <td>${escapeHtml(row.fullName)}</td>
+          <td><span class="badge role role-${escapeHtml(row.role || "unknown")}">${escapeHtml(row.role)}</span></td>
+          <td>${escapeHtml(row.branch || "-")}</td>
           <td>
             <div class="users-actions">
-              <button type="button" class="secondary" onclick="onEditUser('${row.id}')">Edit</button>
-              <button type="button" class="danger-btn" onclick="onDeleteUser('${row.id}', '${row.username || ""}')">Delete</button>
+              <button type="button" class="secondary edit-user-btn" data-user-id="${escapeHtml(row.id)}">Edit</button>
+              <button
+                type="button"
+                class="danger-btn delete-user-btn"
+                data-user-id="${escapeHtml(row.id)}"
+                data-username="${escapeHtml(row.username)}"
+              >Delete</button>
             </div>
           </td>
         </tr>
       `).join("");
+
+      usersTable.querySelectorAll(".edit-user-btn").forEach((button) => {
+        button.addEventListener("click", () => onEditUser(button.dataset.userId));
+      });
+      usersTable.querySelectorAll(".delete-user-btn").forEach((button) => {
+        button.addEventListener("click", () => onDeleteUser(button.dataset.userId, button.dataset.username));
+      });
     }
 
     async function loadUsers() {
@@ -366,8 +387,6 @@
       startUserEdit(user);
     }
 
-    window.onDeleteUser = onDeleteUser;
-    window.onEditUser = onEditUser;
     window.resetUserForm = resetUserForm;
 
     userForm.addEventListener("submit", async (event) => {
