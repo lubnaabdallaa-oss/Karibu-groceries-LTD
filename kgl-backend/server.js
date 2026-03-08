@@ -1,3 +1,4 @@
+/* global __dirname, process */
 /**
  * File purpose: Main entry point for the KGL Backend API.
  * This file sets up Express, middleware, database connection, and API routes.
@@ -62,6 +63,7 @@ app.get("/", (req, res) => {
 });
 
 // Centralized error handling middleware to provide consistent JSON error responses.
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   const status = err.status || 500;
   res.status(status).json({ error: err.message || "Internal server error" });
@@ -106,4 +108,3 @@ start().catch((err) => {
   console.error("Startup failed:", err.message);
   process.exit(1);
 });
-
