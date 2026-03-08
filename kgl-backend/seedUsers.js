@@ -1,3 +1,4 @@
+/* global __dirname */
 const path = require("path");
 const dotenv = require("dotenv");
 const bcrypt = require("bcryptjs");

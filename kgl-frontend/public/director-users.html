@@ -1,0 +1,269 @@
+<!doctype html>
+<!-- File purpose: Director-only user management page. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Management | KGL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-brand"><img src="/images/KGL-logo.png" alt="KGL logo" /></div>
+        <small>Director Workspace</small>
+      </div>
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="/director.html"><span>Dashboard</span></a>
+        <a class="sidebar-link active" href="/director-users.html"><span>User Management</span></a>
+      </nav>
+      <div class="sidebar-meta">
+        <small id="userMeta"></small>
+        <div class="sidebar-actions">
+          <button onclick="logout()">Logout</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <div class="topbar">
+        <div>
+          <h1>User Management</h1>
+          <small>Director-only user administration</small>
+        </div>
+        <div class="nav-actions">
+          <button class="secondary" onclick="loadUsers()">Refresh</button>
+          <button onclick="window.location.href = APP.page('/director.html')">Back To Dashboard</button>
+        </div>
+      </div>
+
+      <section class="grid two">
+        <div class="card">
+          <h2 id="formTitle">Create User</h2>
+          <form id="userForm" class="form-grid">
+            <div>
+              <label for="username">Username</label>
+              <input id="username" name="username" required />
+            </div>
+            <div>
+              <label for="fullName">Full Name</label>
+              <input id="fullName" name="fullName" required />
+            </div>
+            <div>
+              <label for="role">Role</label>
+              <select id="role" name="role" required>
+                <option value="manager">Manager</option>
+                <option value="agent">Sales Agent</option>
+                <option value="director">Director</option>
+              </select>
+            </div>
+            <div id="branchWrap">
+              <label for="branch">Branch</label>
+              <select id="branch" name="branch">
+                <option value="">Select branch</option>
+                <option value="maganjo">Maganjo</option>
+                <option value="matugga">Matugga</option>
+              </select>
+            </div>
+            <div class="full">
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" placeholder="At least 6 characters" />
+            </div>
+            <div class="full nav-actions">
+              <button type="submit" id="submitBtn">Create User</button>
+              <button type="button" class="secondary" onclick="resetForm()">Clear</button>
+            </div>
+          </form>
+          <div id="message" class="message"></div>
+        </div>
+
+        <div class="card">
+          <h2>System Users</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Full Name</th>
+                  <th>Role</th>
+                  <th>Branch</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/public/js/app.js"></script>
+  <script>
+    const session = APP.ensureRole(["director"]);
+    const userMeta = document.getElementById("userMeta");
+    const userForm = document.getElementById("userForm");
+    const usersTable = document.getElementById("usersTable");
+    const message = document.getElementById("message");
+    const roleSelect = document.getElementById("role");
+    const branchWrap = document.getElementById("branchWrap");
+    const branchSelect = document.getElementById("branch");
+    const passwordInput = document.getElementById("password");
+    const formTitle = document.getElementById("formTitle");
+    const submitBtn = document.getElementById("submitBtn");
+    const usernameInput = document.getElementById("username");
+
+    let editingId = null;
+    let usersCache = [];
+
+    userMeta.textContent = `${session.user.fullName} (${session.user.username})`;
+
+    function logout() {
+      APP.clearSession();
+      window.location.href = APP.page("/login.html");
+    }
+
+    function setMessage(text, type) {
+      message.className = `message ${type || ""}`.trim();
+      message.textContent = text || "";
+    }
+
+    function syncBranchVisibility() {
+      const role = String(roleSelect.value || "").toLowerCase();
+      const isDirector = role === "director";
+      branchWrap.style.display = isDirector ? "none" : "";
+      branchSelect.required = !isDirector;
+      if (isDirector) {
+        branchSelect.value = "";
+      }
+    }
+
+    function resetForm() {
+      editingId = null;
+      userForm.reset();
+      roleSelect.value = "manager";
+      syncBranchVisibility();
+      usernameInput.disabled = false;
+      passwordInput.required = true;
+      formTitle.textContent = "Create User";
+      submitBtn.textContent = "Create User";
+      setMessage("");
+    }
+
+    function startEdit(user) {
+      editingId = user.id;
+      usernameInput.value = user.username || "";
+      usernameInput.disabled = true;
+      document.getElementById("fullName").value = user.fullName || "";
+      roleSelect.value = user.role || "manager";
+      syncBranchVisibility();
+      branchSelect.value = user.branch || "";
+      passwordInput.value = "";
+      passwordInput.required = false;
+      formTitle.textContent = "Edit User";
+      submitBtn.textContent = "Update User";
+      setMessage(`Editing ${user.username}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function loadUsers() {
+      try {
+        const rows = await APP.api("/users");
+        usersCache = Array.isArray(rows) ? rows : [];
+        usersTable.innerHTML = usersCache.map((row) => `
+          <tr>
+            <td>${row.username || ""}</td>
+            <td>${row.fullName || ""}</td>
+            <td>${row.role || ""}</td>
+            <td>${row.branch || "-"}</td>
+            <td>
+              <button type="button" class="secondary" onclick="onEdit('${row.id}')">Edit</button>
+              <button type="button" onclick="onDelete('${row.id}', '${row.username || ""}')">Delete</button>
+            </td>
+          </tr>
+        `).join("");
+      } catch (error) {
+        setMessage(error.message, "error");
+      }
+    }
+
+    async function onDelete(id, username) {
+      if (!window.confirm(`Delete user "${username}"?`)) {
+        return;
+      }
+      try {
+        await APP.api(`/users/${id}`, { method: "DELETE" });
+        setMessage(`User deleted: ${username}`, "success");
+        await loadUsers();
+      } catch (error) {
+        setMessage(error.message, "error");
+      }
+    }
+
+    function onEdit(id) {
+      const user = usersCache.find((row) => row.id === id);
+      if (!user) {
+        setMessage("User not found in current list", "error");
+        return;
+      }
+      startEdit(user);
+    }
+
+    userForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setMessage("");
+
+      const username = String(document.getElementById("username").value || "").trim().toLowerCase();
+      const fullName = String(document.getElementById("fullName").value || "").trim();
+      const role = String(roleSelect.value || "").trim().toLowerCase();
+      const branch = String(branchSelect.value || "").trim().toLowerCase();
+      const password = String(passwordInput.value || "");
+
+      const payload = { fullName, role };
+      if (!editingId) {
+        payload.username = username;
+        payload.password = password;
+      } else {
+        payload.branch = role === "director" ? null : branch;
+      }
+
+      if (!editingId && role !== "director") {
+        payload.branch = branch;
+      }
+
+      if (editingId && password) {
+        payload.password = password;
+      }
+
+      try {
+        if (editingId) {
+          await APP.api(`/users/${editingId}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          });
+          setMessage("User updated successfully", "success");
+        } else {
+          await APP.api("/users", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+          setMessage("User created successfully", "success");
+        }
+        resetForm();
+        await loadUsers();
+      } catch (error) {
+        setMessage(error.message, "error");
+      }
+    });
+
+    roleSelect.addEventListener("change", syncBranchVisibility);
+
+    resetForm();
+    loadUsers();
+  </script>
+</body>
+</html>

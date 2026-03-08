@@ -19,6 +19,7 @@ const procurementRoutes = require("./src/routes/procurements");
 const salesRoutes = require("./src/routes/sales");
 const inventoryRoutes = require("./src/routes/inventory");
 const reportRoutes = require("./src/routes/reports");
+const userManagementRoutes = require("./src/routes/users");
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use("/procurements", procurementRoutes);
 app.use("/sales", salesRoutes);
 app.use("/inventory", inventoryRoutes);
 app.use("/reports", reportRoutes);
+app.use("/users", userManagementRoutes);
 
 // Configure static file hosting for frontend assets (CSS, Images, and HTML).
 const frontendRoot = path.join(__dirname, "..", "kgl-frontend");

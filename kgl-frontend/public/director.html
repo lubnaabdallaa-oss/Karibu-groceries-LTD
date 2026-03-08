@@ -23,6 +23,7 @@
         <a class="sidebar-link active" data-panel="overview" href="#overview"><i class="fa-solid fa-chart-line"></i><span>Overview</span></a>
         <a class="sidebar-link" data-panel="reports" href="#reports"><i class="fa-solid fa-file-invoice"></i><span>Reports</span></a>
         <a class="sidebar-link" data-panel="charts" href="#charts"><i class="fa-solid fa-chart-pie"></i><span>Charts</span></a>
+        <a class="sidebar-link" data-panel="users" href="#users"><i class="fa-solid fa-users-gear"></i><span>Manage Users</span></a>
       </nav>
       <div class="sidebar-meta">
         <small id="userMeta"></small>
@@ -40,6 +41,7 @@
           <small>Aggregated branch and product performance only</small>
         </div>
         <div class="nav-actions">
+          <button onclick="activatePanel('users')">Manage Users</button>
           <button class="secondary" onclick="triggerRefresh()">Refresh</button>
         </div>
       </div>
@@ -83,6 +85,85 @@
           </div>
         </div>
       </section>
+
+      <section id="users" class="panel">
+        <div class="users-layout">
+          <div class="card users-list-card">
+            <div class="users-head">
+              <h2>System Users</h2>
+              <button type="button" class="secondary users-refresh-btn" onclick="loadUsers()">Refresh Users</button>
+            </div>
+            <div class="users-filters">
+              <input id="userSearch" type="text" placeholder="Search username or full name" />
+              <select id="roleFilter">
+                <option value="">All roles</option>
+                <option value="manager">Manager</option>
+                <option value="agent">Sales Agent</option>
+                <option value="director">Director</option>
+              </select>
+              <select id="branchFilter">
+                <option value="">All branches</option>
+                <option value="maganjo">Maganjo</option>
+                <option value="matugga">Matugga</option>
+                <option value="none">No branch</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Role</th>
+                    <th>Branch</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card users-form-card">
+            <h2 id="userFormTitle">Create User</h2>
+            <form id="userForm" class="form-grid users-form-grid">
+              <div>
+                <label for="username">Username</label>
+                <input id="username" name="username" required />
+              </div>
+              <div>
+                <label for="fullName">Full Name</label>
+                <input id="fullName" name="fullName" required />
+              </div>
+              <div>
+                <label for="role">Role</label>
+                <select id="role" name="role" required>
+                  <option value="manager">Manager</option>
+                  <option value="agent">Sales Agent</option>
+                  <option value="director">Director</option>
+                </select>
+              </div>
+              <div id="branchWrap">
+                <label for="branch">Branch</label>
+                <select id="branch" name="branch">
+                  <option value="">Select branch</option>
+                  <option value="maganjo">Maganjo</option>
+                  <option value="matugga">Matugga</option>
+                </select>
+              </div>
+              <div class="full">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" placeholder="At least 6 characters" />
+              </div>
+              <div class="full nav-actions">
+                <button type="submit" id="userSubmitBtn">Create User</button>
+                <button type="button" class="secondary" onclick="resetUserForm()">Clear</button>
+              </div>
+            </form>
+            <div id="userMessage" class="message"></div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -101,9 +182,25 @@
     // DOM elements for navigation and panel management.
     const navLinks = Array.from(document.querySelectorAll(".sidebar-link"));
     const panels = Array.from(document.querySelectorAll(".panel"));
+
+    const userForm = document.getElementById("userForm");
+    const usersTable = document.getElementById("usersTable");
+    const userMessage = document.getElementById("userMessage");
+    const roleSelect = document.getElementById("role");
+    const roleFilter = document.getElementById("roleFilter");
+    const branchWrap = document.getElementById("branchWrap");
+    const branchSelect = document.getElementById("branch");
+    const branchFilter = document.getElementById("branchFilter");
+    const userSearch = document.getElementById("userSearch");
+    const passwordInput = document.getElementById("password");
+    const userFormTitle = document.getElementById("userFormTitle");
+    const userSubmitBtn = document.getElementById("userSubmitBtn");
+    const usernameInput = document.getElementById("username");
     
     // Local cache for chart and table data.
     let cache = { salesByBranch: [], salesByProduct: [] };
+    let userCache = [];
+    let editingUserId = null;
 
     // Set user metadata in the UI.
     document.getElementById("userMeta").textContent = `${session.user.fullName} (${session.user.username})`;
@@ -120,6 +217,16 @@
      * Triggers a data refresh. Reloads the page if the API call fails.
      */
     function triggerRefresh() {
+      const activePanel = panels.find((panel) => panel.classList.contains("active"));
+      const activeId = activePanel ? activePanel.id : "overview";
+
+      if (activeId === "users") {
+        loadUsers()
+          .then(() => setUserMessage("Users refreshed", "success"))
+          .catch(() => window.location.reload());
+        return;
+      }
+
       loadSummary().catch(() => window.location.reload());
     }
 
@@ -130,6 +237,9 @@
       const chosen = panelId || "overview";
       panels.forEach((panel) => panel.classList.toggle("active", panel.id === chosen));
       navLinks.forEach((link) => link.classList.toggle("active", link.dataset.panel === chosen));
+      if (chosen === "users") {
+        loadUsers();
+      }
     }
 
     // Attach click listeners to sidebar links for panel switching.
@@ -141,6 +251,174 @@
     window.addEventListener("hashchange", () => {
       activatePanel(window.location.hash.replace("#", ""));
     });
+
+    function setUserMessage(text, type) {
+      userMessage.className = `message ${type || ""}`.trim();
+      userMessage.textContent = text || "";
+    }
+
+    function syncBranchVisibility() {
+      const role = String(roleSelect.value || "").toLowerCase();
+      const isDirector = role === "director";
+      branchWrap.style.display = isDirector ? "none" : "";
+      branchSelect.required = !isDirector;
+      if (isDirector) {
+        branchSelect.value = "";
+      }
+    }
+
+    function resetUserForm() {
+      editingUserId = null;
+      userForm.reset();
+      roleSelect.value = "manager";
+      syncBranchVisibility();
+      usernameInput.disabled = false;
+      passwordInput.required = true;
+      userFormTitle.textContent = "Create User";
+      userSubmitBtn.textContent = "Create User";
+      setUserMessage("");
+    }
+
+    function startUserEdit(user) {
+      editingUserId = user.id;
+      usernameInput.value = user.username || "";
+      usernameInput.disabled = true;
+      document.getElementById("fullName").value = user.fullName || "";
+      roleSelect.value = user.role || "manager";
+      syncBranchVisibility();
+      branchSelect.value = user.branch || "";
+      passwordInput.value = "";
+      passwordInput.required = false;
+      userFormTitle.textContent = "Edit User";
+      userSubmitBtn.textContent = "Update User";
+      setUserMessage(`Editing ${user.username}`);
+      activatePanel("users");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function getFilteredUsers() {
+      const searchText = String(userSearch.value || "").trim().toLowerCase();
+      const roleValue = String(roleFilter.value || "").trim().toLowerCase();
+      const branchValue = String(branchFilter.value || "").trim().toLowerCase();
+
+      return userCache.filter((row) => {
+        const username = String(row.username || "").toLowerCase();
+        const fullName = String(row.fullName || "").toLowerCase();
+        const role = String(row.role || "").toLowerCase();
+        const branch = String(row.branch || "").toLowerCase();
+
+        const matchSearch = !searchText || username.includes(searchText) || fullName.includes(searchText);
+        const matchRole = !roleValue || role === roleValue;
+        const matchBranch = !branchValue
+          || (branchValue === "none" ? !branch : branch === branchValue);
+
+        return matchSearch && matchRole && matchBranch;
+      });
+    }
+
+    function renderUsersTable() {
+      const rows = getFilteredUsers();
+      usersTable.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${row.username || ""}</td>
+          <td>${row.fullName || ""}</td>
+          <td><span class="badge role role-${row.role || "unknown"}">${row.role || ""}</span></td>
+          <td>${row.branch || "-"}</td>
+          <td>
+            <div class="users-actions">
+              <button type="button" class="secondary" onclick="onEditUser('${row.id}')">Edit</button>
+              <button type="button" class="danger-btn" onclick="onDeleteUser('${row.id}', '${row.username || ""}')">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function loadUsers() {
+      try {
+        const rows = await APP.api("/users");
+        userCache = Array.isArray(rows) ? rows : [];
+        renderUsersTable();
+      } catch (error) {
+        setUserMessage(error.message, "error");
+      }
+    }
+
+    async function onDeleteUser(id, username) {
+      if (!window.confirm(`Delete user "${username}"?`)) {
+        return;
+      }
+      try {
+        await APP.api(`/users/${id}`, { method: "DELETE" });
+        setUserMessage(`User deleted: ${username}`, "success");
+        await loadUsers();
+      } catch (error) {
+        setUserMessage(error.message, "error");
+      }
+    }
+
+    function onEditUser(id) {
+      const user = userCache.find((row) => row.id === id);
+      if (!user) {
+        setUserMessage("User not found in current list", "error");
+        return;
+      }
+      startUserEdit(user);
+    }
+
+    window.onDeleteUser = onDeleteUser;
+    window.onEditUser = onEditUser;
+    window.resetUserForm = resetUserForm;
+
+    userForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setUserMessage("");
+
+      const username = String(usernameInput.value || "").trim().toLowerCase();
+      const fullName = String(document.getElementById("fullName").value || "").trim();
+      const role = String(roleSelect.value || "").trim().toLowerCase();
+      const branch = String(branchSelect.value || "").trim().toLowerCase();
+      const password = String(passwordInput.value || "");
+
+      const payload = { fullName, role };
+      if (!editingUserId) {
+        payload.username = username;
+        payload.password = password;
+        if (role !== "director") {
+          payload.branch = branch;
+        }
+      } else {
+        payload.branch = role === "director" ? null : branch;
+        if (password) {
+          payload.password = password;
+        }
+      }
+
+      try {
+        if (editingUserId) {
+          await APP.api(`/users/${editingUserId}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          });
+          setUserMessage("User updated successfully", "success");
+        } else {
+          await APP.api("/users", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+          setUserMessage("User created successfully", "success");
+        }
+        resetUserForm();
+        await loadUsers();
+      } catch (error) {
+        setUserMessage(error.message, "error");
+      }
+    });
+
+    roleSelect.addEventListener("change", syncBranchVisibility);
+    roleFilter.addEventListener("change", renderUsersTable);
+    branchFilter.addEventListener("change", renderUsersTable);
+    userSearch.addEventListener("input", renderUsersTable);
 
     /**
      * Custom lightweight bar chart renderer using HTML5 Canvas.
@@ -249,6 +527,7 @@
 
     activatePanel(window.location.hash.replace("#", "") || "overview");
     loadSummary();
+    resetUserForm();
   </script>
 </body>
 </html>
