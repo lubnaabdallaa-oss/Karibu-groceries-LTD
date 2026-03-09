@@ -168,6 +168,34 @@ small,
   gap: 8px;
 }
 
+.profile-btn {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0a2f53 0%, #1c5f95 100%);
+  box-shadow: 0 8px 18px rgba(10, 47, 83, 0.26);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.profile-btn i {
+  font-size: 0.95rem;
+  opacity: 0.95;
+}
+
+.profile-btn:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.05);
+  box-shadow: 0 12px 24px rgba(10, 47, 83, 0.3);
+}
+
+.profile-btn:focus-visible {
+  outline: 3px solid rgba(28, 95, 149, 0.35);
+  outline-offset: 2px;
+}
+
 .panel {
   display: none;
   animation: panel-in 240ms ease both;
@@ -381,12 +409,23 @@ th {
   background: linear-gradient(180deg, #f9fcff, #ffffff);
 }
 
+.users-list-card {
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
 .users-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dbe7f2;
+}
+
+.users-head h2 {
+  font-size: 1.04rem;
+  letter-spacing: 0.01em;
 }
 
 .users-refresh-btn {
@@ -401,19 +440,72 @@ th {
   margin-bottom: 12px;
 }
 
+.users-filters .filter-field label {
+  margin-bottom: 6px;
+  color: #385472;
+}
+
+.users-filters input,
+.users-filters select {
+  background: #fff;
+  border-color: #c8d9e8;
+  min-height: 40px;
+}
+
+.users-search-field {
+  position: relative;
+}
+
+.users-search-field input {
+  padding-left: 12px;
+}
+
+.users-table thead th {
+  background: #f2f7fc;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.users-table tbody tr {
+  transition: background-color 130ms ease;
+}
+
+.users-table tbody tr:nth-child(even) {
+  background: #fbfdff;
+}
+
+.users-table tbody tr:hover {
+  background: #eef6ff;
+}
+
+.users-table td {
+  vertical-align: middle;
+}
+
+.users-empty-row td {
+  text-align: center;
+  color: #5f738b;
+  font-style: italic;
+  padding: 16px 10px;
+}
+
 .users-form-grid {
   gap: 12px;
 }
 
 .users-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .users-actions button {
   width: auto;
-  min-width: 66px;
-  padding: 8px 10px;
+  min-width: 74px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  border-radius: 999px;
 }
 
 .danger-btn {
@@ -496,6 +588,9 @@ th {
     flex-direction: column;
     align-items: center;
     text-align: center;
+  }
+  .profile-btn {
+    justify-content: center;
   }
   .dashboard-main {
     padding: 14px;

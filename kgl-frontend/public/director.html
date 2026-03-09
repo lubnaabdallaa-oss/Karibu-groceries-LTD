@@ -41,7 +41,10 @@
           <small>Aggregated branch and product performance only</small>
         </div>
         <div class="nav-actions">
-          <button onclick="activatePanel('users')">Manage Users</button>
+          <button class="profile-btn" onclick="activatePanel('users')">
+            <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+            <span>Mr. Orban</span>
+          </button>
           <button class="secondary" onclick="triggerRefresh()">Refresh</button>
         </div>
       </div>
@@ -94,22 +97,31 @@
               <button type="button" class="secondary users-refresh-btn" onclick="loadUsers()">Refresh Users</button>
             </div>
             <div class="users-filters">
-              <input id="userSearch" type="text" placeholder="Search username or full name" />
-              <select id="roleFilter">
-                <option value="">All roles</option>
-                <option value="manager">Manager</option>
-                <option value="agent">Sales Agent</option>
-                <option value="director">Director</option>
-              </select>
-              <select id="branchFilter">
-                <option value="">All branches</option>
-                <option value="maganjo">Maganjo</option>
-                <option value="matugga">Matugga</option>
-                <option value="none">No branch</option>
-              </select>
+              <div class="filter-field users-search-field">
+                <label for="userSearch">Search Users</label>
+                <input id="userSearch" type="text" placeholder="Search username or full name" />
+              </div>
+              <div class="filter-field">
+                <label for="roleFilter">Role</label>
+                <select id="roleFilter">
+                  <option value="">All Roles</option>
+                  <option value="manager">Manager</option>
+                  <option value="agent">Sales Agent</option>
+                  <option value="director">Director</option>
+                </select>
+              </div>
+              <div class="filter-field">
+                <label for="branchFilter">Branch</label>
+                <select id="branchFilter">
+                  <option value="">All branches</option>
+                  <option value="maganjo">Maganjo</option>
+                  <option value="matugga">Matugga</option>
+                  <option value="none">No branch</option>
+                </select>
+              </div>
             </div>
             <div class="table-wrap">
-              <table>
+              <table class="users-table">
                 <thead>
                   <tr>
                     <th>Username</th>
@@ -212,6 +224,7 @@
       APP.clearSession();
       window.location.href = APP.page("/login.html");
     }
+    window.logout = logout;
 
     /**
      * Triggers a data refresh. Reloads the page if the API call fails.
@@ -229,18 +242,21 @@
 
       loadSummary().catch(() => window.location.reload());
     }
+    window.triggerRefresh = triggerRefresh;
 
     /**
      * Switches the active panel based on the sidebar selection or URL hash.
      */
     function activatePanel(panelId) {
-      const chosen = panelId || "overview";
+      const requested = panelId || "overview";
+      const chosen = panels.some((panel) => panel.id === requested) ? requested : "overview";
       panels.forEach((panel) => panel.classList.toggle("active", panel.id === chosen));
       navLinks.forEach((link) => link.classList.toggle("active", link.dataset.panel === chosen));
       if (chosen === "users") {
         loadUsers();
       }
     }
+    window.activatePanel = activatePanel;
 
     // Attach click listeners to sidebar links for panel switching.
     navLinks.forEach((link) => {
@@ -327,6 +343,14 @@
 
     function renderUsersTable() {
       const rows = getFilteredUsers();
+      if (!rows.length) {
+        usersTable.innerHTML = `
+          <tr class="users-empty-row">
+            <td colspan="5">No users found for the current filters.</td>
+          </tr>
+        `;
+        return;
+      }
       usersTable.innerHTML = rows.map((row) => `
         <tr>
           <td>${escapeHtml(row.username)}</td>
@@ -364,6 +388,7 @@
         setUserMessage(error.message, "error");
       }
     }
+    window.loadUsers = loadUsers;
 
     async function onDeleteUser(id, username) {
       if (!window.confirm(`Delete user "${username}"?`)) {
@@ -379,7 +404,7 @@
     }
 
     function onEditUser(id) {
-      const user = userCache.find((row) => row.id === id);
+      const user = userCache.find((row) => String(row.id) === String(id));
       if (!user) {
         setUserMessage("User not found in current list", "error");
         return;
@@ -517,19 +542,20 @@
     async function loadSummary() {
       // API call to get summary reports.
       const data = await APP.api("/reports/director-summary");
+      const totals = data && data.totals ? data.totals : {};
       cache = {
-        salesByBranch: data.salesByBranch || [],
-        salesByProduct: data.salesByProduct || [],
+        salesByBranch: Array.isArray(data && data.salesByBranch) ? data.salesByBranch : [],
+        salesByProduct: Array.isArray(data && data.salesByProduct) ? data.salesByProduct : [],
       };
 
       // Update KPI cards in the Overview section.
       document.getElementById("totals").innerHTML = `
-        <div class="card kpi-card"><h3>Total Revenue</h3><div class="kpi-value">${APP.currency(data.totals.revenueUgx)}</div></div>
-        <div class="card kpi-card"><h3>Total Sold (Kg)</h3><div class="kpi-value">${Number(data.totals.soldKg).toLocaleString()}</div></div>
-        <div class="card kpi-card"><h3>Credit Outstanding</h3><div class="kpi-value">${APP.currency(data.totals.creditOutstandingUgx)}</div></div>
-        <div class="card kpi-card"><h3>Credit Tonnage (Kg)</h3><div class="kpi-value">${Number(data.totals.creditKg).toLocaleString()}</div></div>
-        <div class="card kpi-card"><h3>Total In Stock (Kg)</h3><div class="kpi-value">${Number(data.totals.inStockKg).toLocaleString()}</div></div>
-        <div class="card kpi-card"><h3>Cash Sale Count</h3><div class="kpi-value">${Number(data.totals.saleCount).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Total Revenue</h3><div class="kpi-value">${APP.currency(totals.revenueUgx)}</div></div>
+        <div class="card kpi-card"><h3>Total Sold (Kg)</h3><div class="kpi-value">${Number(totals.soldKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Credit Outstanding</h3><div class="kpi-value">${APP.currency(totals.creditOutstandingUgx)}</div></div>
+        <div class="card kpi-card"><h3>Credit Tonnage (Kg)</h3><div class="kpi-value">${Number(totals.creditKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Total In Stock (Kg)</h3><div class="kpi-value">${Number(totals.inStockKg).toLocaleString()}</div></div>
+        <div class="card kpi-card"><h3>Cash Sale Count</h3><div class="kpi-value">${Number(totals.saleCount).toLocaleString()}</div></div>
       `;
 
       document.getElementById("byBranch").innerHTML = cache.salesByBranch.map((x) => `
@@ -550,4 +576,3 @@
   </script>
 </body>
 </html>
-

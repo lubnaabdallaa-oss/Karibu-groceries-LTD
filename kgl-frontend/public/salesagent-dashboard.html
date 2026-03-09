@@ -30,7 +30,7 @@
       <div class="sidebar-meta">
         <small id="userMeta"></small>
         <div class="sidebar-actions">
-          <button class="secondary" onclick="triggerRefresh()">Refresh Data</button>
+          <button  class="secondary" onclick="triggerRefresh()">Refresh Data</button>
           <button onclick="logout()">Logout</button>
         </div>
       </div>
@@ -43,7 +43,10 @@
           <small>Record branch sales and monitor stock movement</small>
         </div>
         <div class="nav-actions">
-          <button class="secondary" onclick="triggerRefresh()">Refresh</button>
+          <button class="profile-btn" onclick="triggerRefresh()">
+            <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+            <span>Sales Agent</span>
+          </button>
         </div>
       </div>
 
@@ -158,6 +161,7 @@
       APP.clearSession();
       window.location.href = APP.page("/login.html");
     }
+    window.logout = logout;
 
     /**
      * Triggers a data refresh across all panels. Reloads on failure.
@@ -165,6 +169,7 @@
     function triggerRefresh() {
       refreshAll().catch(() => window.location.reload());
     }
+    window.triggerRefresh = triggerRefresh;
 
     /**
      * Populates select options for product dropdown fields from the PRODUCTS array.
