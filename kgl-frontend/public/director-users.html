@@ -1,26 +1,40 @@
 <!doctype html>
-<!-- File purpose: Director-only user management page. -->
+<!-- File purpose: Director-only user management page. This page allows directors to:
+  - Create system users (Managers, Agents, Directors)
+  - Edit existing users
+  - Delete users
+  - View all registered users in the system 
+   Access control is enforced using APP.ensureRole(["director"]).-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- Mobile responsive layout -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <!-- Page title -->
   <title>User Management | KGL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Sora font family -->
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Main application stylesheet -->
   <link rel="stylesheet" href="/css/app.css" />
 </head>
 <body class="dashboard-page">
   <div class="dashboard-shell">
+     <!-- SIDEBAR NAVIGATION -->
     <aside class="sidebar">
       <div>
+         <!-- Kgl logo -->
         <div class="sidebar-brand"><img src="/images/KGL-logo.png" alt="KGL logo" /></div>
+         <!-- Workspace label -->
         <small>Director Workspace</small>
       </div>
+      <!-- Sidebar navigation links -->
       <nav class="sidebar-nav">
         <a class="sidebar-link" href="/director.html"><span>Dashboard</span></a>
         <a class="sidebar-link active" href="/director-users.html"><span>User Management</span></a>
       </nav>
+       <!-- Logged-in user info + logout -->
       <div class="sidebar-meta">
         <small id="userMeta"></small>
         <div class="sidebar-actions">
@@ -29,19 +43,24 @@
       </div>
     </aside>
 
+     <!-- MAIN DASHBOARD AREA -->
     <main class="dashboard-main">
+      <!-- Page header -->
       <div class="topbar">
         <div>
           <h1>User Management</h1>
           <small>Director-only user administration</small>
         </div>
+         <!-- Page action buttons -->
         <div class="nav-actions">
           <button class="secondary" onclick="loadUsers()">Refresh</button>
+           <!-- Navigate back to dashboard -->
           <button onclick="window.location.href = APP.page('/director.html')">Back To Dashboard</button>
         </div>
       </div>
-
+       <!-- MAIN CONTENT GRID -->
       <section class="grid two">
+         <!-- USER CREATE / EDIT FORM -->
         <div class="card">
           <h2 id="formTitle">Create User</h2>
           <form id="userForm" class="form-grid">
@@ -53,6 +72,7 @@
               <label for="fullName">Full Name</label>
               <input id="fullName" name="fullName" required />
             </div>
+              <!-- User role -->
             <div>
               <label for="role">Role</label>
               <select id="role" name="role" required>
@@ -61,6 +81,7 @@
                 <option value="director">Director</option>
               </select>
             </div>
+            <!-- Branch selector (hidden for directors) -->
             <div id="branchWrap">
               <label for="branch">Branch</label>
               <select id="branch" name="branch">
@@ -69,18 +90,22 @@
                 <option value="matugga">Matugga</option>
               </select>
             </div>
+             <!-- Password field -->
             <div class="full">
               <label for="password">Password</label>
               <input id="password" name="password" type="password" placeholder="At least 6 characters" />
             </div>
+               <!-- Form buttons -->
             <div class="full nav-actions">
               <button type="submit" id="submitBtn">Create User</button>
+               <!-- Clears the form -->
               <button type="button" class="secondary" onclick="resetForm()">Clear</button>
             </div>
           </form>
+           <!-- Success / error message area -->
           <div id="message" class="message"></div>
         </div>
-
+         <!-- USERS TABLE -->
         <div class="card">
           <h2>System Users</h2>
           <div class="table-wrap">
@@ -94,6 +119,7 @@
                   <th>Actions</th>
                 </tr>
               </thead>
+                <!-- User rows inserted dynamically -->
               <tbody id="usersTable"></tbody>
             </table>
           </div>
@@ -104,6 +130,12 @@
 
   <script src="/public/js/app.js"></script>
   <script>
+      /*
+      =============================
+      SESSION & DOM INITIALIZATION
+      =============================
+    */
+   // Ensure only directors can access this page
     const session = APP.ensureRole(["director"]);
     const userMeta = document.getElementById("userMeta");
     const userForm = document.getElementById("userForm");
@@ -116,21 +148,32 @@
     const formTitle = document.getElementById("formTitle");
     const submitBtn = document.getElementById("submitBtn");
     const usernameInput = document.getElementById("username");
-
+     
+    // Track currently edited user
     let editingId = null;
+     // Cache loaded users
     let usersCache = [];
 
     userMeta.textContent = `${session.user.fullName} (${session.user.username})`;
+     /*
+      =============================
+      AUTH / SESSION ACTIONS
+      =============================
+    */
+
 
     function logout() {
       APP.clearSession();
       window.location.href = APP.page("/login.html");
     }
+    //  UI MESSAGE HANDLING
 
     function setMessage(text, type) {
       message.className = `message ${type || ""}`.trim();
       message.textContent = text || "";
     }
+    //  ROLE-BASED UI BEHAVIOR
+    // Directors do not require a branch
 
     function syncBranchVisibility() {
       const role = String(roleSelect.value || "").toLowerCase();
@@ -141,6 +184,8 @@
         branchSelect.value = "";
       }
     }
+
+    //  FORM STATE MANAGEMENT
 
     function resetForm() {
       editingId = null;
@@ -153,7 +198,7 @@
       submitBtn.textContent = "Create User";
       setMessage("");
     }
-
+    //  EDIT EXISTING USER
     function startEdit(user) {
       editingId = user.id;
       usernameInput.value = user.username || "";
@@ -169,11 +214,12 @@
       setMessage(`Editing ${user.username}`);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-
+    //  LOAD USERS FROM API
     async function loadUsers() {
       try {
         const rows = await APP.api("/users");
         usersCache = Array.isArray(rows) ? rows : [];
+         // Render users table
         usersTable.innerHTML = usersCache.map((row) => `
           <tr>
             <td>${row.username || ""}</td>
@@ -190,7 +236,7 @@
         setMessage(error.message, "error");
       }
     }
-
+     // DELETE USER
     async function onDelete(id, username) {
       if (!window.confirm(`Delete user "${username}"?`)) {
         return;
@@ -203,6 +249,7 @@
         setMessage(error.message, "error");
       }
     }
+    //  EDIT BUTTON HANDLER
 
     function onEdit(id) {
       const user = usersCache.find((row) => row.id === id);
@@ -212,7 +259,7 @@
       }
       startEdit(user);
     }
-
+    //  FORM SUBMISSION
     userForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       setMessage("");
@@ -224,6 +271,7 @@
       const password = String(passwordInput.value || "");
 
       const payload = { fullName, role };
+      // Creating a new user
       if (!editingId) {
         payload.username = username;
         payload.password = password;
@@ -240,6 +288,7 @@
       }
 
       try {
+        // Update existing user
         if (editingId) {
           await APP.api(`/users/${editingId}`, {
             method: "PATCH",
@@ -247,6 +296,7 @@
           });
           setMessage("User updated successfully", "success");
         } else {
+           // Create new user
           await APP.api("/users", {
             method: "POST",
             body: JSON.stringify(payload),
@@ -259,7 +309,7 @@
         setMessage(error.message, "error");
       }
     });
-
+    //  INITIAL PAGE SETUP
     roleSelect.addEventListener("change", syncBranchVisibility);
 
     resetForm();

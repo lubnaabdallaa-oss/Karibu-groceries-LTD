@@ -1,5 +1,6 @@
 <!doctype html>
 <!-- File purpose: Manager dashboard UI and client-side workflow handlers. -->
+ <!-- Manager dashboard page for handling procurement, sales, inventory, and reports -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -16,16 +17,25 @@
     <!-- Sidebar navigation controls which panel (form/report) is visible. -->
     <aside class="sidebar">
       <div>
+         <!-- kgl logo -->
         <div class="sidebar-brand"><img src="/images/KGL-logo.png" alt="KGL logo" /></div>
         <small> Manager Workspace</small>
       </div>
+      <!-- Navigation links switch visible dashboard panels -->
       <nav class="sidebar-nav">
+         <!-- Dashboard summary panel -->
         <a class="sidebar-link active" data-panel="overview" href="#overview"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
+        <!-- Procurement form panel -->
         <a class="sidebar-link" data-panel="procurement" href="#procurement"><i class="fa-solid fa-truck-ramp-box"></i><span>Procurement Form</span></a>
+         <!-- Cash sales form -->
         <a class="sidebar-link" data-panel="cash-sale" href="#cash-sale"><i class="fa-solid fa-cash-register"></i><span>Cash Sale Form</span></a>
+        <!-- Credit sales form -->
         <a class="sidebar-link" data-panel="credit-sale" href="#credit-sale"><i class="fa-solid fa-file-contract"></i><span>Credit Sale Form</span></a>
+         <!-- Inventory table -->
         <a class="sidebar-link" data-panel="inventory" href="#inventory"><i class="fa-solid fa-boxes-stacked"></i><span>Inventory Records</span></a>
+        <!-- Cash sales records -->
         <a class="sidebar-link" data-panel="cash-records" href="#cash-records"><i class="fa-solid fa-money-bill-transfer"></i><span>Cash Sales Records</span></a>
+         <!-- Credit sales records -->
         <a class="sidebar-link" data-panel="credit-records" href="#credit-records"><i class="fa-solid fa-hand-holding-dollar"></i><span>Credit Sales Records</span></a>
       </nav>
       <div class="sidebar-meta">
@@ -50,11 +60,11 @@
           </button>
         </div>
       </div>
-
+      <!-- Dashboard overview showing KPI summary cards -->
       <section id="overview" class="panel active">
         <div class="grid cards" id="summaryCards"></div>
       </section>
-
+      <!-- Form used by manager to record produce procured from suppliers -->
       <section id="procurement" class="panel">
         <div class="card">
           <h2>Record Procurement</h2>
@@ -89,7 +99,7 @@
           <div id="pMsg" class="message" role="status" aria-live="polite"></div>
         </div>
       </section>
-
+      <!-- Records a cash sale transaction -->
       <section id="cash-sale" class="panel">
         <div class="card">
           <h2>Record Cash Sale</h2>
@@ -113,7 +123,7 @@
           <div id="sMsg" class="message" role="status" aria-live="polite"></div>
         </div>
       </section>
-
+      <!-- Records sales where the buyer will pay later -->
       <section id="credit-sale" class="panel">
         <div class="card">
           <h2>Record Credit / Deferred Sale</h2>
@@ -141,7 +151,7 @@
           <div id="crMsg" class="message" role="status" aria-live="polite"></div>
         </div>
       </section>
-
+      <!-- Table showing current stock available in each branch -->
       <section id="inventory" class="panel">
         <div class="card">
           <h2>Inventory Records</h2>
@@ -155,6 +165,7 @@
           </div>
         </div>
       </section>
+      <!-- cash record form -->
 
       <section id="cash-records" class="panel">
         <div class="card">
@@ -169,7 +180,7 @@
           </div>
         </div>
       </section>
-
+      <!-- credit record form -->
       <section id="credit-records" class="panel">
         <div class="card">
           <h2>Credit Sales Records</h2>

@@ -6,7 +6,7 @@ const User = require("../models/User");
 
 // Default users to simplify first-run login and demo setup.
 const defaultUsers = [
-  { username: "kgl_admin", password: "groceries2026", role: "manager", branch: "maganjo", fullName: "KGL Manager" },
+  { username: "kgl_admin", password: "groceries2026", role: "manager", branch: "matugga", fullName: "KGL Manager" },
   { username: "agent_maganjo", password: "groceries2026", role: "agent", branch: "maganjo", fullName: "Maganjo Agent" },
   { username: "agent_matugga", password: "groceries2026", role: "agent", branch: "matugga", fullName: "Matugga Agent" },
   { username: "orban", password: "groceries2026", role: "director", branch: null, fullName: "Mr. Orban" },

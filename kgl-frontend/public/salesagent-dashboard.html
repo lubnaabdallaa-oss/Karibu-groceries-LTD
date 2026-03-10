@@ -1,10 +1,13 @@
 <!doctype html>
 <!-- File purpose: Sales agent dashboard UI and client-side workflow handlers. -->
+ <!-- Sales Agent dashboard page for recording sales and viewing stock information -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+   <!-- Makes the page responsive on mobile devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sales Agent Dashboard | KGL</title>
+   <!-- Google font used across the dashboard -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,9 +19,12 @@
     <!-- Sidebar links map to dedicated panels so each task has its own space. -->
     <aside class="sidebar">
       <div>
+         <!-- kgl logo -->
         <div class="sidebar-brand"><img src="/images/KGL-logo.png" alt="KGL logo" /></div>
+         <!-- Workspace label -->
         <small>Sales Agent Workspace</small>
       </div>
+      <!-- Navigation links -->
       <nav class="sidebar-nav">
         <a class="sidebar-link active" data-panel="overview" href="#overview"><i class="fa-solid fa-house"></i><span>Dashboard</span></a>
         <a class="sidebar-link" data-panel="cash-sale" href="#cash-sale"><i class="fa-solid fa-cash-register"></i><span>Cash Sale Form</span></a>
@@ -27,21 +33,24 @@
         <a class="sidebar-link" data-panel="cash-records" href="#cash-records"><i class="fa-solid fa-money-bill-transfer"></i><span>Cash Sales Records</span></a>
         <a class="sidebar-link" data-panel="credit-records" href="#credit-records"><i class="fa-solid fa-hand-holding-dollar"></i><span>Credit Sales Records</span></a>
       </nav>
+       <!-- Logged-in user info and actions -->
       <div class="sidebar-meta">
         <small id="userMeta"></small>
         <div class="sidebar-actions">
+           <!-- Reload dashboard data -->
           <button  class="secondary" onclick="triggerRefresh()">Refresh Data</button>
           <button onclick="logout()">Logout</button>
         </div>
       </div>
     </aside>
-
+    <!-- Top bar showing page title -->
     <main class="dashboard-main">
       <div class="topbar">
         <div>
           <h1>Sales Agent Dashboard</h1>
           <small>Record branch sales and monitor stock movement</small>
         </div>
+          <!-- Profile button (refresh shortcut) -->
         <div class="nav-actions">
           <button class="profile-btn" onclick="triggerRefresh()">
             <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
@@ -49,14 +58,15 @@
           </button>
         </div>
       </div>
-
+       <!-- Dashboard summary cards -->
       <section id="overview" class="panel active">
         <div class="grid cards" id="summaryCards"></div>
       </section>
-
+      <!-- CASH SALE FORM -->
       <section id="cash-sale" class="panel">
         <div class="card">
           <h2>Record Cash Sale</h2>
+            <!-- Form used to record immediate payments -->
           <form id="cashForm" class="form-grid" novalidate>
             <div><label for="cProduct">Product Name</label><select id="cProduct" data-hint="Choose product currently available at your branch." required></select></div>
             <div><label for="cType">Produce Type</label><input id="cType" minlength="2" pattern="[A-Za-z ]+" data-pattern-message="Use letters only, at least 2 characters." required /></div>
@@ -65,13 +75,15 @@
             <div><label for="cDate">Date/Time</label><input id="cDate" type="datetime-local" required /></div>
             <div class="full"><button type="submit">Save Cash Sale</button></div>
           </form>
+           <!-- Message area for success or error feedback -->
           <div id="cMsg" class="message" role="status" aria-live="polite"></div>
         </div>
       </section>
-
+       <!-- CREDIT SALE FORM -->
       <section id="credit-sale" class="panel">
         <div class="card">
           <h2>Record Credit / Deferred Sale</h2>
+           <!-- Form used when customer will pay later -->
           <form id="creditForm" class="form-grid" novalidate>
             <div><label for="crBuyer">Buyer Name</label><input id="crBuyer" minlength="2" data-hint="Minimum 2 characters." required /></div>
             <div><label for="crNin">National ID (NIN)</label><input id="crNin" placeholder="CF123456789ABC" data-hint="Use official NIN format." required /></div>
@@ -87,24 +99,27 @@
           <div id="crMsg" class="message" role="status" aria-live="polite"></div>
         </div>
       </section>
-
+       <!-- INVENTORY TABLE -->
       <section id="inventory" class="panel">
         <div class="card">
           <h2>Branch Inventory</h2>
+           <!-- Table displaying available stock -->
           <div class="table-wrap">
             <table>
               <thead>
                 <tr><th>Product</th><th>Type</th><th>Kg</th><th>Price/Kg</th><th>Status</th></tr>
               </thead>
+              <!-- Inventory rows inserted dynamically -->
               <tbody id="invBody"></tbody>
             </table>
           </div>
         </div>
       </section>
-
+       <!-- CASH SALES RECORDS -->
       <section id="cash-records" class="panel">
         <div class="card">
           <h2>Recent Cash Sales</h2>
+          <!-- Table displaying recent sales -->
           <div class="table-wrap">
             <table>
               <thead>
@@ -115,7 +130,7 @@
           </div>
         </div>
       </section>
-
+       <!-- CREDIT SALES RECORDS -->
       <section id="credit-records" class="panel">
         <div class="card">
           <h2>Recent Credit Sales</h2>
