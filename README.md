@@ -8,12 +8,6 @@ This implementation uses `Node.js + Express + MongoDB` for the backend and `HTML
 - `agent`: records cash and credit sales only for own branch.
 - `director` (Mr. Orban): views aggregated totals only.
 
-## Default Accounts
-All accounts use password: `groceries2026`
-- `kgl_admin` (manager)
-- `agent_maganjo` (agent)
-- `agent_matugga` (agent)
-- `orban` (director)
 
 ## Backend Setup
 1. `cd kgl-backend`
