@@ -54,7 +54,7 @@ small,
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 14px;
-}
+  }
 
 .sidebar {
   background: linear-gradient(165deg, var(--sidebar-bg), var(--sidebar-bg-2));
@@ -219,8 +219,28 @@ small,
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 1px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Hover effect */
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Optional: add subtle inner spacing for text */
+.card h3 {
+  margin-top: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.card p {
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .grid {
